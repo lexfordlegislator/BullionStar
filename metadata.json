@@ -1,0 +1,6 @@
+{
+  "name": "BullionStar Singapore — Precious Metals & Certified Diamond Depository",
+  "description": "Institutional precious metals dealer and vault depository in Singapore for investment gold, silver, platinum, palladium, and GIA-certified diamonds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
