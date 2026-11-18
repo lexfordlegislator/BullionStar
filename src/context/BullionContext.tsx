@@ -84,7 +84,7 @@ interface BullionContextType {
   clearCart: () => void;
   checkoutCart: () => Promise<void>;
 
-  // Auth & Client Portal (single `clients` table)
+  // Auth & Client Portal (single `clients` table + mandatory Email OTP)
   authModalOpen: boolean;
   authModalMode: 'signin' | 'signup';
   openAuthModal: (mode: 'signin' | 'signup') => void;
@@ -93,10 +93,26 @@ interface BullionContextType {
   isDemoMode: boolean;
   authLoading: boolean;
   refreshingClient: boolean;
-  registerAccount: (
-    input: RegisterInput
-  ) => Promise<{ ok: boolean; error?: string; needsConfirmation?: boolean }>;
-  loginWithCredentials: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  lastSignInAt: string;
+  startSignupWithOtp: (input: RegisterInput) => Promise<{ ok: boolean; error?: string }>;
+  verifySignupOtp: (
+    email: string,
+    token: string,
+    meta: { fullName: string; phone: string; country: string }
+  ) => Promise<{ ok: boolean; error?: string }>;
+  resendSignupOtp: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  startLoginWithPassword: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  verifyLoginOtp: (email: string, token: string) => Promise<{ ok: boolean; error?: string }>;
+  resendLoginOtp: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  requestPasswordResetOtp: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  completePasswordResetWithOtp: (
+    email: string,
+    token: string,
+    newPassword: string
+  ) => Promise<{ ok: boolean; error?: string }>;
+  updateAccountPassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
+  requestAccountEmailChange: (newEmail: string) => Promise<{ ok: boolean; error?: string }>;
+  verifyAccountEmailChange: (newEmail: string, token: string) => Promise<{ ok: boolean; error?: string }>;
   demoLogin: () => void;
   logout: () => Promise<void>;
   refreshClientSession: () => Promise<void>;
@@ -201,6 +217,10 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [refreshingClient, setRefreshingClient] = useState<boolean>(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [lastSignInAt, setLastSignInAt] = useState<string>('');
+  const authFlowPendingRef = React.useRef<boolean>(false);
+  const signupVerifyTypeRef = React.useRef<'signup' | 'email'>('signup');
+  const pendingVaultIdRef = React.useRef<string>('');
 
   const [client, setClient] = useState<ClientRow>(EMPTY_CLIENT);
   const [transactions, setTransactions] = useState<TransactionLogItem[]>([]);
@@ -390,8 +410,9 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const boot = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data.session?.user) {
+      if (data.session?.user && !authFlowPendingRef.current) {
         const u = data.session.user;
+        setLastSignInAt(u.last_sign_in_at || new Date().toISOString());
         await loadClientRow(u.id, u.email, (u.user_metadata || {}) as Record<string, string>);
       }
       setAuthLoading(false);
@@ -399,14 +420,18 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     boot();
 
     const { data: sub } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (authFlowPendingRef.current) return;
+
       if (event === 'SIGNED_OUT') {
         setIsLoggedIn(false);
         setIsDemoMode(false);
+        setLastSignInAt('');
         setClient(EMPTY_CLIENT);
         setTransactions([]);
         setNotifications([]);
-      } else if (session?.user && event === 'SIGNED_IN') {
+      } else if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
         const u = session.user;
+        if (u.last_sign_in_at) setLastSignInAt(u.last_sign_in_at);
         await loadClientRow(u.id, u.email, (u.user_metadata || {}) as Record<string, string>);
       }
     });
@@ -433,6 +458,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const { data } = await supabase.auth.getUser();
       const targetId = data.user?.id || client.id;
       const targetEmail = data.user?.email || client.email;
+      if (data.user?.last_sign_in_at) setLastSignInAt(data.user.last_sign_in_at);
       if (targetId) {
         const updated = await loadClientRow(
           targetId,
@@ -448,11 +474,13 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const registerAccount = async (input: RegisterInput) => {
+  // Sign Up Step 1: Register with Supabase Auth and require 6-digit email OTP verification
+  const startSignupWithOtp = async (input: RegisterInput) => {
     const cleanEmail = input.email.trim().toLowerCase();
     const vaultId = `BS-SG-${Math.floor(10000 + Math.random() * 89999)}`;
+    pendingVaultIdRef.current = vaultId;
+    signupVerifyTypeRef.current = 'signup';
 
-    // Check duplicate email in `clients`
     const { data: existingRows } = await supabase
       .from('clients')
       .select('id')
@@ -466,102 +494,333 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email: cleanEmail,
-      password: input.password,
-      options: {
-        data: {
-          full_name: input.fullName.trim(),
-          phone: input.phone.trim(),
-          country: input.country,
-          vault_id: vaultId,
-        },
-      },
-    });
-
-    if (error) {
-      return { ok: false, error: error.message };
-    }
-
-    if (data.user && data.user.identities && data.user.identities.length === 0) {
-      return {
-        ok: false,
-        error: 'An account with this email address already exists. Please sign in instead.',
-      };
-    }
-
-    const userId = data.user?.id;
-    if (!userId) {
-      return { ok: false, error: 'Registration did not return a valid Auth user ID.' };
-    }
-
-    // Save one row into `clients` matching Auth user ID with all balances starting at 0
-    const { error: insertErr } = await supabase.from('clients').upsert(
-      {
-        id: userId,
-        full_name: input.fullName.trim(),
+    authFlowPendingRef.current = true;
+    try {
+      const { data, error } = await supabase.auth.signUp({
         email: cleanEmail,
-        phone: input.phone.trim(),
-        country: input.country,
-        vault_id: vaultId,
-        cash_usd: 0,
-        gold_kg: 0,
-        silver_kg: 0,
-        diamond_carats: 0,
-        diamond_value_usd: 0,
-      },
-      { onConflict: 'id' }
-    );
-
-    if (insertErr) {
-      return { ok: false, error: `Could not create clients record: ${insertErr.message}` };
-    }
-
-    if (data.session) {
-      await loadClientRow(userId, cleanEmail, {
-        full_name: input.fullName.trim(),
-        phone: input.phone.trim(),
-        country: input.country,
-        vault_id: vaultId,
+        password: input.password,
+        options: {
+          data: {
+            full_name: input.fullName.trim(),
+            phone: input.phone.trim(),
+            country: input.country,
+            vault_id: vaultId,
+          },
+        },
       });
+
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        return {
+          ok: false,
+          error: 'An account with this email address already exists. Please sign in instead.',
+        };
+      }
+
+      if (!data.user?.id) {
+        return { ok: false, error: 'Registration did not return a valid Auth user ID.' };
+      }
+
+      // Never grant dashboard session before 6-digit email OTP verification
+      if (data.session) {
+        await supabase.auth.signOut();
+        const { error: otpErr } = await supabase.auth.signInWithOtp({
+          email: cleanEmail,
+          options: { shouldCreateUser: false },
+        });
+        if (otpErr) {
+          return { ok: false, error: otpErr.message };
+        }
+        signupVerifyTypeRef.current = 'email';
+      }
+
+      return { ok: true };
+    } finally {
+      authFlowPendingRef.current = false;
+    }
+  };
+
+  // Sign Up Step 2: Verify 6-digit signup OTP, create clients row, and grant dashboard access
+  const verifySignupOtp = async (
+    email: string,
+    token: string,
+    meta: { fullName: string; phone: string; country: string }
+  ) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanToken = token.trim();
+    const vaultId = pendingVaultIdRef.current || `BS-SG-${Math.floor(10000 + Math.random() * 89999)}`;
+
+    authFlowPendingRef.current = true;
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: signupVerifyTypeRef.current,
+      });
+
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+
+      const user = data.user || data.session?.user;
+      if (!user) {
+        return { ok: false, error: 'Verification succeeded, but user session could not be loaded.' };
+      }
+
+      const userMeta = (user.user_metadata || {}) as Record<string, string>;
+      const resolvedVaultId = userMeta.vault_id || vaultId;
+      const resolvedFullName = meta.fullName.trim() || userMeta.full_name || 'Vault Client';
+      const resolvedPhone = meta.phone.trim() || userMeta.phone || '';
+      const resolvedCountry = meta.country || userMeta.country || 'Singapore';
+
+      // Create profile row in `clients` if not already created
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('id', user.id)
+        .limit(1);
+
+      if (!existingClient || existingClient.length === 0) {
+        const { error: insertErr } = await supabase.from('clients').upsert(
+          {
+            id: user.id,
+            full_name: resolvedFullName,
+            email: cleanEmail,
+            phone: resolvedPhone,
+            country: resolvedCountry,
+            vault_id: resolvedVaultId,
+            cash_usd: 0,
+            gold_kg: 0,
+            silver_kg: 0,
+            diamond_carats: 0,
+            diamond_value_usd: 0,
+          },
+          { onConflict: 'id' }
+        );
+        if (insertErr) {
+          return { ok: false, error: `Could not create clients record: ${insertErr.message}` };
+        }
+      }
+
+      setLastSignInAt(user.last_sign_in_at || new Date().toISOString());
+      await loadClientRow(user.id, cleanEmail, {
+        full_name: resolvedFullName,
+        phone: resolvedPhone,
+        country: resolvedCountry,
+        vault_id: resolvedVaultId,
+      });
+
       pushLocalNotification(
-        `Vault Account ${vaultId} Created`,
-        'Initialized with $0.00 cash and 0.00 kg gold, silver, and diamonds.',
+        `Vault Account ${resolvedVaultId} Verified`,
+        'Email OTP verified. Account initialized with $0.00 cash and 0.00 kg bullion.',
         'Portfolio'
       );
       setAuthModalOpen(false);
       setView('account');
-      pushToast('Account Created', `Signed in as ${input.fullName.trim()} (${vaultId})`);
+      pushToast('Account Verified', `Signed in as ${resolvedFullName} (${resolvedVaultId})`);
       return { ok: true };
+    } finally {
+      authFlowPendingRef.current = false;
     }
-
-    return {
-      ok: true,
-      needsConfirmation: true,
-    };
   };
 
-  const loginWithCredentials = async (email: string, password: string) => {
+  const resendSignupOtp = async (email: string) => {
     const cleanEmail = email.trim().toLowerCase();
-    const { data, error } = await supabase.auth.signInWithPassword({
+    if (signupVerifyTypeRef.current === 'email') {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: { shouldCreateUser: false },
+      });
+      return error ? { ok: false, error: error.message } : { ok: true };
+    }
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
       email: cleanEmail,
-      password,
     });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  };
+
+  // Sign In Step 1 & 2: Verify password, immediately sign out, and dispatch mandatory 6-digit Email OTP
+  const startLoginWithPassword = async (email: string, password: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    authFlowPendingRef.current = true;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+      if (!data.user) {
+        return { ok: false, error: 'Unable to verify credentials.' };
+      }
+
+      // Step 2: Sign out immediately so no dashboard access is granted prior to Email OTP
+      await supabase.auth.signOut();
+
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: { shouldCreateUser: false },
+      });
+
+      if (otpError) {
+        return { ok: false, error: otpError.message };
+      }
+
+      return { ok: true };
+    } finally {
+      authFlowPendingRef.current = false;
+    }
+  };
+
+  // Sign In Step 3: Verify 6-digit Email OTP and grant dashboard access
+  const verifyLoginOtp = async (email: string, token: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanToken = token.trim();
+
+    authFlowPendingRef.current = true;
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: cleanToken,
+        type: 'email',
+      });
+
+      if (error) {
+        return { ok: false, error: error.message };
+      }
+
+      const user = data.user || data.session?.user;
+      if (!user) {
+        return { ok: false, error: 'Unable to establish verified session.' };
+      }
+
+      setLastSignInAt(user.last_sign_in_at || new Date().toISOString());
+      await loadClientRow(
+        user.id,
+        user.email,
+        (user.user_metadata || {}) as Record<string, string>
+      );
+      setAuthModalOpen(false);
+      setView('account');
+      pushToast('Signed In', '6-digit email OTP verified. Welcome to your vault.');
+      return { ok: true };
+    } finally {
+      authFlowPendingRef.current = false;
+    }
+  };
+
+  const resendLoginOtp = async (email: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.signInWithOtp({
+      email: cleanEmail,
+      options: { shouldCreateUser: false },
+    });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  };
+
+  // Forgot Password Step 1: Send 6-digit recovery OTP
+  const requestPasswordResetOtp = async (email: string) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  };
+
+  // Forgot Password Step 2: Verify recovery OTP, update password, sign out to require fresh Sign In + OTP
+  const completePasswordResetWithOtp = async (
+    email: string,
+    token: string,
+    newPassword: string
+  ) => {
+    const cleanEmail = email.trim().toLowerCase();
+    authFlowPendingRef.current = true;
+    try {
+      const { error: verifyErr } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: token.trim(),
+        type: 'recovery',
+      });
+      if (verifyErr) {
+        return { ok: false, error: verifyErr.message };
+      }
+
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (updateErr) {
+        return { ok: false, error: updateErr.message };
+      }
+
+      await supabase.auth.signOut();
+      return { ok: true };
+    } finally {
+      authFlowPendingRef.current = false;
+    }
+  };
+
+  // Security Settings: Change Password
+  const updateAccountPassword = async (newPassword: string) => {
+    if (isDemoMode) {
+      return { ok: false, error: 'Demo preview accounts cannot modify live Supabase passwords.' };
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       return { ok: false, error: error.message };
     }
-    if (!data.user) {
-      return { ok: false, error: 'Unable to retrieve user session.' };
+    pushLocalNotification('Password Updated', 'Your depository account password was updated.', 'Portfolio');
+    pushToast('Password Updated', 'Your account password has been changed successfully.');
+    return { ok: true };
+  };
+
+  // Security Settings: Request Email Change
+  const requestAccountEmailChange = async (newEmail: string) => {
+    if (isDemoMode) {
+      return { ok: false, error: 'Demo preview accounts cannot modify registered email addresses.' };
+    }
+    const cleanEmail = newEmail.trim().toLowerCase();
+    const { error } = await supabase.auth.updateUser({ email: cleanEmail });
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  };
+
+  // Security Settings: Verify 6-digit Email Change OTP & sync `clients` table
+  const verifyAccountEmailChange = async (newEmail: string, token: string) => {
+    if (isDemoMode) {
+      return { ok: false, error: 'Demo preview accounts cannot verify live email changes.' };
+    }
+    const cleanEmail = newEmail.trim().toLowerCase();
+    const { error: verifyErr } = await supabase.auth.verifyOtp({
+      email: cleanEmail,
+      token: token.trim(),
+      type: 'email_change',
+    });
+    if (verifyErr) {
+      return { ok: false, error: verifyErr.message };
     }
 
-    await loadClientRow(
-      data.user.id,
-      data.user.email,
-      (data.user.user_metadata || {}) as Record<string, string>
+    const { error: dbErr } = await supabase
+      .from('clients')
+      .update({ email: cleanEmail })
+      .eq('id', client.id);
+
+    if (dbErr) {
+      return { ok: false, error: `Auth email verified, but clients table update failed: ${dbErr.message}` };
+    }
+
+    setClient((prev) => ({ ...prev, email: cleanEmail }));
+    pushLocalNotification(
+      'Email Address Updated',
+      `Your registered account email is now ${cleanEmail}.`,
+      'Portfolio'
     );
-    setAuthModalOpen(false);
-    setView('account');
-    pushToast('Signed In', 'Loaded your vault balances from Supabase.');
+    pushToast('Email Updated', `Registered email changed to ${cleanEmail}.`);
     return { ok: true };
   };
 
@@ -569,6 +828,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setClient(DEMO_CLIENT);
     setTransactions(DEMO_TRANSACTIONS);
     setNotifications(INITIAL_NOTIFICATIONS);
+    setLastSignInAt(new Date().toISOString());
     setIsDemoMode(true);
     setIsLoggedIn(true);
     setAuthModalOpen(false);
@@ -577,15 +837,23 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const logout = async () => {
-    if (!isDemoMode) {
-      await supabase.auth.signOut();
+    authFlowPendingRef.current = true;
+    try {
+      if (!isDemoMode) {
+        await supabase.auth.signOut();
+      }
+      setIsLoggedIn(false);
+      setIsDemoMode(false);
+      setLastSignInAt('');
+      setClient(EMPTY_CLIENT);
+      setTransactions([]);
+      setNotifications([]);
+      setView('home');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      pushToast('Signed Out', 'Securely signed out. Next login requires password + email OTP.');
+    } finally {
+      authFlowPendingRef.current = false;
     }
-    setIsLoggedIn(false);
-    setIsDemoMode(false);
-    setClient(EMPTY_CLIENT);
-    setTransactions([]);
-    setNotifications([]);
-    pushToast('Signed Out', 'Securely signed out of your vault account.');
   };
 
   const markAllNotificationsRead = () => {
@@ -1097,8 +1365,18 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isDemoMode,
         authLoading,
         refreshingClient,
-        registerAccount,
-        loginWithCredentials,
+        lastSignInAt,
+        startSignupWithOtp,
+        verifySignupOtp,
+        resendSignupOtp,
+        startLoginWithPassword,
+        verifyLoginOtp,
+        resendLoginOtp,
+        requestPasswordResetOtp,
+        completePasswordResetWithOtp,
+        updateAccountPassword,
+        requestAccountEmailChange,
+        verifyAccountEmailChange,
         demoLogin,
         logout,
         refreshClientSession,

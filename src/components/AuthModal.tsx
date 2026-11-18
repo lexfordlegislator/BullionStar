@@ -1,5 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, ChevronDown, Lock, ShieldCheck, UserPlus, X } from 'lucide-react';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ChevronDown,
+  KeyRound,
+  Lock,
+  MailCheck,
+  RefreshCw,
+  ShieldCheck,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { useBullion } from '../context/BullionContext';
 
 interface CountryDialInfo {
@@ -58,24 +69,47 @@ const formatCombinedPhone = (rawPhone: string, dialCode: string): string => {
   return `${dialCode} ${local}`.trim();
 };
 
+type AuthStep = 'form' | 'signup-otp' | 'signin-otp' | 'forgot-email' | 'forgot-verify';
+
 export const AuthModal: React.FC = () => {
   const {
     authModalOpen,
     authModalMode,
     openAuthModal,
     closeAuthModal,
-    registerAccount,
-    loginWithCredentials,
+    startSignupWithOtp,
+    verifySignupOtp,
+    resendSignupOtp,
+    startLoginWithPassword,
+    verifyLoginOtp,
+    resendLoginOtp,
+    requestPasswordResetOtp,
+    completePasswordResetWithOtp,
     demoLogin,
   } = useBullion();
 
   const [mode, setMode] = useState<'signin' | 'signup'>(authModalMode);
+  const [step, setStep] = useState<AuthStep>('form');
+
+  // Form credentials & profile
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('Singapore');
   const [phoneCodeCountry, setPhoneCodeCountry] = useState('Singapore');
   const [password, setPassword] = useState('');
+
+  // 6-digit OTP verification
+  const [otpCode, setOtpCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resending, setResending] = useState(false);
+
+  // Forgot password recovery
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   const [error, setError] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -83,10 +117,26 @@ export const AuthModal: React.FC = () => {
   const selectedDialInfo = getCountryDialInfo(phoneCodeCountry);
 
   useEffect(() => {
-    setMode(authModalMode);
-    setError('');
-    setInfoMsg('');
+    if (authModalOpen) {
+      setMode(authModalMode);
+      setStep('form');
+      setOtpCode('');
+      setResetCode('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setError('');
+      setInfoMsg('');
+    }
   }, [authModalMode, authModalOpen]);
+
+  // 60-second cooldown countdown timer for OTP resend
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   if (!authModalOpen) return null;
 
@@ -95,7 +145,7 @@ export const AuthModal: React.FC = () => {
     setPhoneCodeCountry(nextCountry);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePrimarySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setInfoMsg('');
@@ -106,9 +156,8 @@ export const AuthModal: React.FC = () => {
       return;
     }
 
-    const formattedPhone = formatCombinedPhone(phone, selectedDialInfo.dialCode);
-
     if (mode === 'signup') {
+      const formattedPhone = formatCombinedPhone(phone, selectedDialInfo.dialCode);
       if (fullName.trim().length < 2) {
         setError('Please enter your full legal name.');
         return;
@@ -123,11 +172,9 @@ export const AuthModal: React.FC = () => {
         setError('Password must be at least 6 characters.');
         return;
       }
-    }
 
-    setSubmitting(true);
-    if (mode === 'signup') {
-      const res = await registerAccount({
+      setSubmitting(true);
+      const res = await startSignupWithOtp({
         fullName: fullName.trim(),
         email: email.trim(),
         phone: formattedPhone,
@@ -135,31 +182,178 @@ export const AuthModal: React.FC = () => {
         password,
       });
       setSubmitting(false);
+
       if (!res.ok) {
         setError(res.error || 'Registration failed.');
-      } else if (res.needsConfirmation) {
-        setInfoMsg(
-          'Account registered! Please check your email inbox to confirm your address, then sign in.'
-        );
+        return;
       }
-    } else {
-      const res = await loginWithCredentials(email.trim(), password);
+
+      setOtpCode('');
+      setResendCooldown(60);
+      setInfoMsg(`A 6-digit security verification code has been sent to ${email.trim()}.`);
+      setStep('signup-otp');
+      return;
+    }
+
+    // Sign In Step 1 & 2: Verify password, sign out immediately, send 6-digit Email OTP
+    if (password.length < 6) {
+      setError('Please enter your account password.');
+      return;
+    }
+    setSubmitting(true);
+    const res = await startLoginWithPassword(email.trim(), password);
+    setSubmitting(false);
+
+    if (!res.ok) {
+      setError(res.error || 'Invalid email or password.');
+      return;
+    }
+
+    setOtpCode('');
+    setResendCooldown(60);
+    setInfoMsg(`Password verified. Enter the 6-digit one-time passcode sent to ${email.trim()}.`);
+    setStep('signin-otp');
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setInfoMsg('');
+
+    const cleanedCode = otpCode.replace(/\s+/g, '');
+    if (cleanedCode.length !== 6) {
+      setError('Please enter the 6-digit security code from your email.');
+      return;
+    }
+
+    setSubmitting(true);
+    if (step === 'signup-otp') {
+      const formattedPhone = formatCombinedPhone(phone, selectedDialInfo.dialCode);
+      const res = await verifySignupOtp(email.trim(), cleanedCode, {
+        fullName: fullName.trim(),
+        phone: formattedPhone,
+        country,
+      });
       setSubmitting(false);
       if (!res.ok) {
-        setError(res.error || 'Sign in failed.');
+        setError(res.error || 'Invalid or expired 6-digit verification code.');
+      }
+    } else {
+      const res = await verifyLoginOtp(email.trim(), cleanedCode);
+      setSubmitting(false);
+      if (!res.ok) {
+        setError(res.error || 'Invalid or expired 6-digit one-time passcode.');
       }
     }
   };
 
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || resending) return;
+    setError('');
+    setInfoMsg('');
+    setResending(true);
+
+    const targetEmail = step === 'forgot-verify' ? resetEmail.trim() : email.trim();
+    const res =
+      step === 'signup-otp'
+        ? await resendSignupOtp(targetEmail)
+        : step === 'forgot-verify'
+        ? await requestPasswordResetOtp(targetEmail)
+        : await resendLoginOtp(targetEmail);
+
+    setResending(false);
+    if (!res.ok) {
+      setError(res.error || 'Could not resend code. Please wait a moment and try again.');
+      return;
+    }
+    setResendCooldown(60);
+    setInfoMsg(`A fresh 6-digit code has been sent to ${targetEmail}.`);
+  };
+
+  const handleForgotEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setInfoMsg('');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail.trim())) {
+      setError('Please enter your registered email address.');
+      return;
+    }
+
+    setSubmitting(true);
+    const res = await requestPasswordResetOtp(resetEmail.trim());
+    setSubmitting(false);
+    if (!res.ok) {
+      setError(res.error || 'Could not send password reset code.');
+      return;
+    }
+
+    setResetCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setResendCooldown(60);
+    setInfoMsg(`We sent a 6-digit password reset code to ${resetEmail.trim()}.`);
+    setStep('forgot-verify');
+  };
+
+  const handleForgotResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setInfoMsg('');
+
+    const cleanedCode = resetCode.replace(/\s+/g, '');
+    if (cleanedCode.length !== 6) {
+      setError('Please enter the 6-digit reset code from your email.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('New password and confirmation do not match.');
+      return;
+    }
+
+    setSubmitting(true);
+    const res = await completePasswordResetWithOtp(resetEmail.trim(), cleanedCode, newPassword);
+    setSubmitting(false);
+    if (!res.ok) {
+      setError(res.error || 'Failed to verify reset code or update password.');
+      return;
+    }
+
+    setEmail(resetEmail.trim());
+    setPassword('');
+    setResetCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setMode('signin');
+    setStep('form');
+    setInfoMsg(
+      'Your password has been updated. Please sign in with your new password and verify via email OTP.'
+    );
+  };
+
+  const headerTitle =
+    step === 'signup-otp'
+      ? 'Verify Email Security Code'
+      : step === 'signin-otp'
+      ? 'Enter 6-Digit One-Time Passcode'
+      : step === 'forgot-email' || step === 'forgot-verify'
+      ? 'Recover Depository Password'
+      : mode === 'signup'
+      ? 'Create Depository Account'
+      : 'Sign In to Your Account';
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
-      <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-2xl">
+      <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-2xl max-h-[94vh] overflow-y-auto">
         <div className="bg-[#0D1F3C] px-6 py-4 text-white flex items-center justify-between">
           <div>
             <p className="text-[11px] font-medium text-[#F2D06B]">BullionStar Singapore Depository</p>
-            <h2 className="font-serif text-xl font-bold">
-              {mode === 'signup' ? 'Create Depository Account' : 'Sign In to Your Account'}
-            </h2>
+            <h2 className="font-serif text-xl font-bold">{headerTitle}</h2>
           </div>
           <button
             onClick={closeAuthModal}
@@ -170,181 +364,508 @@ export const AuthModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Mode Switcher */}
-        <div className="grid grid-cols-2 border-b border-slate-200 bg-[#F8FAFC]">
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signin');
-              openAuthModal('signin');
-              setError('');
-            }}
-            className={`py-2.5 text-xs font-bold border-b-2 transition-colors ${
-              mode === 'signin'
-                ? 'border-[#C59B27] text-[#0D1F3C] bg-white'
-                : 'border-transparent text-slate-500 hover:text-[#0D1F3C]'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('signup');
-              openAuthModal('signup');
-              setError('');
-            }}
-            className={`py-2.5 text-xs font-bold border-b-2 transition-colors ${
-              mode === 'signup'
-                ? 'border-[#C59B27] text-[#0D1F3C] bg-white'
-                : 'border-transparent text-slate-500 hover:text-[#0D1F3C]'
-            }`}
-          >
-            Create Account
-          </button>
-        </div>
+        {/* Mode Switcher (only on primary Sign In / Create Account view) */}
+        {step === 'form' && (
+          <div className="grid grid-cols-2 border-b border-slate-200 bg-[#F8FAFC]">
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signin');
+                openAuthModal('signin');
+                setError('');
+                setInfoMsg('');
+              }}
+              className={`py-2.5 text-xs font-bold border-b-2 transition-colors ${
+                mode === 'signin'
+                  ? 'border-[#C59B27] text-[#0D1F3C] bg-white'
+                  : 'border-transparent text-slate-500 hover:text-[#0D1F3C]'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('signup');
+                openAuthModal('signup');
+                setError('');
+                setInfoMsg('');
+              }}
+              className={`py-2.5 text-xs font-bold border-b-2 transition-colors ${
+                mode === 'signup'
+                  ? 'border-[#C59B27] text-[#0D1F3C] bg-white'
+                  : 'border-transparent text-slate-500 hover:text-[#0D1F3C]'
+              }`}
+            >
+              Create Account
+            </button>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-3.5">
-          {mode === 'signup' && (
+        {/* STEP A: Primary Sign In / Create Account Form */}
+        {step === 'form' && (
+          <form onSubmit={handlePrimarySubmit} autoComplete="on" className="p-6 space-y-3.5">
+            {mode === 'signup' && (
+              <div>
+                <label htmlFor="auth-full-name" className="block text-xs font-semibold text-slate-700 mb-1">
+                  Full Legal Name
+                </label>
+                <input
+                  id="auth-full-name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Sophia Lim Hui Ling"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                />
+              </div>
+            )}
+
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Full Legal Name</label>
+              <label htmlFor="auth-email" className="block text-xs font-semibold text-slate-700 mb-1">
+                Email Address
+              </label>
               <input
-                type="text"
+                id="auth-email"
+                name="email"
+                type="email"
+                autoComplete="email"
                 required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Sophia Lim Hui Ling"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
                 className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
               />
             </div>
-          )}
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
-            />
-          </div>
-
-          {mode === 'signup' && (
-            <>
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Country</label>
-                <select
-                  value={country}
-                  onChange={(e) => handleCountryChange(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
-                >
-                  {COUNTRY_DIAL_LIST.map((c) => (
-                    <option key={c.name} value={c.name}>
-                      {c.flag} {c.name} {c.dialCode !== '+' ? `(${c.dialCode})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Phone Number
-                </label>
-                <div className="flex items-stretch rounded border border-slate-300 focus-within:border-[#0D1F3C] bg-white overflow-hidden">
-                  <div className="relative flex items-center gap-1.5 px-2.5 py-2 bg-[#F8FAFC] border-r border-slate-300 text-sm font-semibold text-[#0D1F3C] shrink-0 select-none hover:bg-slate-100 transition-colors">
-                    <span aria-hidden="true">{selectedDialInfo.flag}</span>
-                    <span className="font-mono text-xs">{selectedDialInfo.dialCode}</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
-                    <select
-                      aria-label="Country dialing code"
-                      value={phoneCodeCountry}
-                      onChange={(e) => setPhoneCodeCountry(e.target.value)}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    >
-                      {COUNTRY_DIAL_LIST.map((c) => (
-                        <option key={c.name} value={c.name}>
-                          {c.flag} {c.name} ({c.dialCode})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder={selectedDialInfo.placeholder}
-                    className="w-full px-3 py-2 text-sm focus:outline-none bg-white"
-                  />
+            {mode === 'signup' && (
+              <>
+                <div>
+                  <label htmlFor="auth-country" className="block text-xs font-semibold text-slate-700 mb-1">
+                    Country
+                  </label>
+                  <select
+                    id="auth-country"
+                    name="country"
+                    autoComplete="country-name"
+                    value={country}
+                    onChange={(e) => handleCountryChange(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
+                  >
+                    {COUNTRY_DIAL_LIST.map((c) => (
+                      <option key={c.name} value={c.name}>
+                        {c.flag} {c.name} {c.dialCode !== '+' ? `(${c.dialCode})` : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
+                <div>
+                  <label htmlFor="auth-phone" className="block text-xs font-semibold text-slate-700 mb-1">
+                    Phone Number
+                  </label>
+                  <div className="flex items-stretch rounded border border-slate-300 focus-within:border-[#0D1F3C] bg-white overflow-hidden">
+                    <div className="relative flex items-center gap-1.5 px-2.5 py-2 bg-[#F8FAFC] border-r border-slate-300 text-sm font-semibold text-[#0D1F3C] shrink-0 select-none hover:bg-slate-100 transition-colors">
+                      <span aria-hidden="true">{selectedDialInfo.flag}</span>
+                      <span className="font-mono text-xs">{selectedDialInfo.dialCode}</span>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                      <select
+                        aria-label="Country dialing code"
+                        value={phoneCodeCountry}
+                        onChange={(e) => setPhoneCodeCountry(e.target.value)}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      >
+                        {COUNTRY_DIAL_LIST.map((c) => (
+                          <option key={c.name} value={c.name}>
+                            {c.flag} {c.name} ({c.dialCode})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <input
+                      id="auth-phone"
+                      name="tel"
+                      type="tel"
+                      autoComplete="tel-national"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder={selectedDialInfo.placeholder}
+                      className="w-full px-3 py-2 text-sm focus:outline-none bg-white"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div>
+              <label htmlFor="auth-password" className="block text-xs font-semibold text-slate-700 mb-1">
+                Password
+              </label>
+              <input
+                id="auth-password"
+                name="password"
+                type="password"
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={mode === 'signup' ? 'Minimum 6 characters' : 'Enter your password'}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+              />
+              {mode === 'signin' && (
+                <div className="mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResetEmail(email.trim());
+                      setError('');
+                      setInfoMsg('');
+                      setStep('forgot-email');
+                    }}
+                    className="text-xs font-semibold text-[#B38818] hover:text-[#0D1F3C] hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
-            </>
-          )}
+            )}
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
-            <input
-              type="password"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === 'signup' ? 'Minimum 6 characters' : 'Enter your password'}
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
-            />
-          </div>
+            {infoMsg && (
+              <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{infoMsg}</span>
+              </div>
+            )}
 
-          {error && (
-            <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {infoMsg && (
-            <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2.5">
-              <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>{infoMsg}</span>
-            </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
-          >
-            {mode === 'signup' ? <UserPlus className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-            <span>
-              {submitting
-                ? 'Authenticating...'
-                : mode === 'signup'
-                ? 'Create Account & Open Vault'
-                : 'Sign In to Vault'}
-            </span>
-          </button>
-
-          {mode === 'signup' && (
-            <p className="text-[11px] text-slate-500 text-center leading-snug">
-              New accounts initialize with $0.00 cash and 0.00 kg bullion custody until funded or allocated.
-            </p>
-          )}
-
-          <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500 flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-              <span>Encrypted Session</span>
-            </span>
             <button
-              type="button"
-              onClick={demoLogin}
-              className="text-xs font-semibold text-[#0D1F3C] hover:text-[#B38818] underline underline-offset-2"
+              type="submit"
+              disabled={submitting}
+              className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
             >
-              Quick Preview: Demo Client Login
+              {mode === 'signup' ? <UserPlus className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              <span>
+                {submitting
+                  ? mode === 'signup'
+                    ? 'Sending Verification Code...'
+                    : 'Verifying Password & Sending OTP...'
+                  : mode === 'signup'
+                  ? 'Create Account & Send 6-Digit Code'
+                  : 'Continue to Email OTP Verification'}
+              </span>
             </button>
-          </div>
-        </form>
+
+            {mode === 'signup' && (
+              <p className="text-[11px] text-slate-500 text-center leading-snug">
+                Mandatory 6-digit email verification required before vault access. New accounts initialize with $0.00 cash and 0.00 kg bullion.
+              </p>
+            )}
+
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Email OTP 2FA Enforced</span>
+              </span>
+              <button
+                type="button"
+                onClick={demoLogin}
+                className="text-xs font-semibold text-[#0D1F3C] hover:text-[#B38818] underline underline-offset-2"
+              >
+                Quick Preview: Demo Client Login
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* STEP B: 6-Digit Email OTP Verification Screen (Sign Up & Sign In) */}
+        {(step === 'signup-otp' || step === 'signin-otp') && (
+          <form onSubmit={handleVerifyOtp} className="p-6 space-y-4">
+            <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 flex items-start gap-3">
+              <MailCheck className="w-5 h-5 text-[#B38818] shrink-0 mt-0.5" />
+              <div className="text-xs text-slate-700 leading-relaxed">
+                <p className="font-bold text-[#0D1F3C]">
+                  {step === 'signup-otp'
+                    ? '6-Digit Security Code Verification'
+                    : 'Mandatory Two-Factor Email OTP'}
+                </p>
+                <p className="mt-1">
+                  Enter the 6-digit verification code sent to{' '}
+                  <strong className="text-[#0D1F3C]">{email.trim()}</strong> to unlock your Singapore depository dashboard.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="otp-code-input" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                6-Digit Verification Code
+              </label>
+              <input
+                id="otp-code-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                required
+                autoFocus
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                placeholder="000000"
+                className="w-full px-4 py-3 text-center text-xl font-mono font-bold tracking-[0.45em] border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {infoMsg && (
+              <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{infoMsg}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting || otpCode.length !== 6}
+              className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>
+                {submitting
+                  ? 'Verifying 6-Digit Code...'
+                  : step === 'signup-otp'
+                  ? 'Verify & Activate Vault Account'
+                  : 'Verify & Enter Vault Dashboard'}
+              </span>
+            </button>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('form');
+                  setOtpCode('');
+                  setError('');
+                  setInfoMsg('');
+                }}
+                className="inline-flex items-center gap-1 text-slate-600 hover:text-[#0D1F3C] font-medium"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || resending}
+                className="inline-flex items-center gap-1.5 font-semibold text-[#0D1F3C] hover:text-[#B38818] disabled:text-slate-400 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                <span>
+                  {resending
+                    ? 'Sending...'
+                    : resendCooldown > 0
+                    ? `Resend Code (${resendCooldown}s)`
+                    : 'Resend Code'}
+                </span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* STEP C1: Forgot Password — Request 6-Digit Reset Code */}
+        {step === 'forgot-email' && (
+          <form onSubmit={handleForgotEmailSubmit} autoComplete="on" className="p-6 space-y-4">
+            <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 flex items-start gap-3">
+              <KeyRound className="w-5 h-5 text-[#B38818] shrink-0 mt-0.5" />
+              <div className="text-xs text-slate-700 leading-relaxed">
+                <p className="font-bold text-[#0D1F3C]">Password Recovery Verification</p>
+                <p className="mt-1">
+                  Enter your registered BullionStar email address and we will send a 6-digit reset verification code.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="forgot-email-input" className="block text-xs font-semibold text-slate-700 mb-1">
+                Registered Email Address
+              </label>
+              <input
+                id="forgot-email-input"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                autoFocus
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="name@company.com"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-2.5 bg-[#0D1F3C] hover:bg-[#193561] disabled:opacity-60 text-white font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
+            >
+              <MailCheck className="w-4 h-4 text-[#F2D06B]" />
+              <span>{submitting ? 'Sending Reset Code...' : 'Send 6-Digit Reset Code'}</span>
+            </button>
+
+            <div className="pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('form');
+                  setMode('signin');
+                  setError('');
+                  setInfoMsg('');
+                }}
+                className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-[#0D1F3C]"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Sign In</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* STEP C2: Forgot Password — Enter 6-Digit Reset Code & New Password */}
+        {step === 'forgot-verify' && (
+          <form onSubmit={handleForgotResetSubmit} autoComplete="on" className="p-6 space-y-3.5">
+            <div>
+              <label htmlFor="reset-code-input" className="block text-xs font-semibold text-slate-700 mb-1">
+                6-Digit Reset Code (sent to {resetEmail.trim()})
+              </label>
+              <input
+                id="reset-code-input"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                required
+                autoFocus
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                placeholder="000000"
+                className="w-full px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[0.4em] border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="reset-new-password" className="block text-xs font-semibold text-slate-700 mb-1">
+                New Password
+              </label>
+              <input
+                id="reset-new-password"
+                name="new-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Minimum 6 characters"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="reset-confirm-password" className="block text-xs font-semibold text-slate-700 mb-1">
+                Confirm New Password
+              </label>
+              <input
+                id="reset-confirm-password"
+                name="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {infoMsg && (
+              <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2.5">
+                <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{infoMsg}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>{submitting ? 'Updating Password...' : 'Verify Code & Reset Password'}</span>
+            </button>
+
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep('forgot-email');
+                  setError('');
+                  setInfoMsg('');
+                }}
+                className="inline-flex items-center gap-1 text-slate-600 hover:text-[#0D1F3C] font-medium"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Change Email</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || resending}
+                className="inline-flex items-center gap-1.5 font-semibold text-[#0D1F3C] hover:text-[#B38818] disabled:text-slate-400 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
+                <span>
+                  {resending
+                    ? 'Sending...'
+                    : resendCooldown > 0
+                    ? `Resend Code (${resendCooldown}s)`
+                    : 'Resend Code'}
+                </span>
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

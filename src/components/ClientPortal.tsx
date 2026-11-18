@@ -7,7 +7,10 @@ import {
   CheckCircle2,
   Download,
   FileCheck2,
+  KeyRound,
   Lock,
+  LogOut,
+  Mail,
   Printer,
   RefreshCw,
   Search,
@@ -22,7 +25,7 @@ import { useBullion } from '../context/BullionContext';
 import { CurrencyCode, VaultCertificateSummary, VaultHoldingItem } from '../types/bullion';
 import { ResilientImage } from './ResilientImage';
 
-type AccountTab = 'overview' | 'holdings' | 'certificates' | 'photos' | 'audits' | 'history';
+type AccountTab = 'overview' | 'holdings' | 'certificates' | 'photos' | 'audits' | 'history' | 'security';
 
 export const ClientPortal: React.FC = () => {
   const {
@@ -30,9 +33,14 @@ export const ClientPortal: React.FC = () => {
     isDemoMode,
     authLoading,
     refreshingClient,
+    lastSignInAt,
     openAuthModal,
     demoLogin,
+    logout,
     refreshClientSession,
+    updateAccountPassword,
+    requestAccountEmailChange,
+    verifyAccountEmailChange,
     client,
     holdings,
     certificate,
@@ -74,6 +82,20 @@ export const ClientPortal: React.FC = () => {
 
   const [txFilter, setTxFilter] = useState('All');
   const [txSearch, setTxSearch] = useState('');
+
+  // Security & Account Settings State
+  const [secNewPassword, setSecNewPassword] = useState('');
+  const [secConfirmPassword, setSecConfirmPassword] = useState('');
+  const [secPwdBusy, setSecPwdBusy] = useState(false);
+  const [secPwdErr, setSecPwdErr] = useState('');
+  const [secPwdSuccess, setSecPwdSuccess] = useState('');
+
+  const [secNewEmail, setSecNewEmail] = useState('');
+  const [secEmailOtpStep, setSecEmailOtpStep] = useState(false);
+  const [secEmailOtpCode, setSecEmailOtpCode] = useState('');
+  const [secEmailBusy, setSecEmailBusy] = useState(false);
+  const [secEmailErr, setSecEmailErr] = useState('');
+  const [secEmailSuccess, setSecEmailSuccess] = useState('');
 
   const cashUSD = Number(client.cash_usd || 0);
   const goldKg = Number(client.gold_kg || 0);
@@ -329,6 +351,7 @@ export const ClientPortal: React.FC = () => {
           { id: 'photos' as AccountTab, label: 'High-Res Photo Verification' },
           { id: 'audits' as AccountTab, label: 'Audit & Insurance Reports' },
           { id: 'history' as AccountTab, label: `Transactions (${transactions.length})` },
+          { id: 'security' as AccountTab, label: 'Security & Account Settings' },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -937,6 +960,309 @@ export const ClientPortal: React.FC = () => {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB 7: Security & Account Settings */}
+      {activeTab === 'security' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded p-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-[#0D1F3C]">Security &amp; Account Settings</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Manage login credentials, verified depository email, and mandatory 6-digit Email OTP protection for {client.vault_id || 'your account'}.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-800">
+              <ShieldCheck className="w-4 h-4 text-emerald-700" />
+              <span>Active — 6-Digit Email OTP Enforced on Every Login</span>
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Card 1: Change Account Password */}
+            <div className="bg-white border border-slate-200 rounded overflow-hidden flex flex-col">
+              <div className="bg-[#0D1F3C] px-5 py-3.5 text-white flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-[#F2D06B]" />
+                <h3 className="text-sm font-bold">Change Account Password</h3>
+              </div>
+              <form
+                autoComplete="on"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setSecPwdErr('');
+                  setSecPwdSuccess('');
+                  if (secNewPassword.length < 6) {
+                    setSecPwdErr('New password must be at least 6 characters.');
+                    return;
+                  }
+                  if (secNewPassword !== secConfirmPassword) {
+                    setSecPwdErr('New password and confirmation do not match.');
+                    return;
+                  }
+                  setSecPwdBusy(true);
+                  const res = await updateAccountPassword(secNewPassword);
+                  setSecPwdBusy(false);
+                  if (!res.ok) {
+                    setSecPwdErr(res.error || 'Could not update password.');
+                    return;
+                  }
+                  setSecNewPassword('');
+                  setSecConfirmPassword('');
+                  setSecPwdSuccess('Account password updated successfully.');
+                }}
+                className="p-5 space-y-4 flex-1 flex flex-col justify-between"
+              >
+                <div className="space-y-3.5">
+                  <div>
+                    <label htmlFor="sec-new-pwd" className="block text-xs font-semibold text-slate-700 mb-1">
+                      New Password
+                    </label>
+                    <input
+                      id="sec-new-pwd"
+                      name="new-password"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength={6}
+                      value={secNewPassword}
+                      onChange={(e) => setSecNewPassword(e.target.value)}
+                      placeholder="Minimum 6 characters"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="sec-confirm-pwd" className="block text-xs font-semibold text-slate-700 mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      id="sec-confirm-pwd"
+                      name="confirm-password"
+                      type="password"
+                      autoComplete="new-password"
+                      required
+                      minLength={6}
+                      value={secConfirmPassword}
+                      onChange={(e) => setSecConfirmPassword(e.target.value)}
+                      placeholder="Re-enter new password"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                    />
+                  </div>
+
+                  {secPwdErr && (
+                    <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{secPwdErr}</span>
+                    </div>
+                  )}
+
+                  {secPwdSuccess && (
+                    <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2.5">
+                      <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{secPwdSuccess}</span>
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={secPwdBusy}
+                  className="w-full py-2.5 bg-[#0D1F3C] hover:bg-[#193561] disabled:opacity-60 text-white font-semibold text-xs sm:text-sm rounded transition-colors"
+                >
+                  {secPwdBusy ? 'Updating Password...' : 'Update Password'}
+                </button>
+              </form>
+            </div>
+
+            {/* Card 2: Update Registered Email */}
+            <div className="bg-white border border-slate-200 rounded overflow-hidden flex flex-col">
+              <div className="bg-[#0D1F3C] px-5 py-3.5 text-white flex items-center gap-2">
+                <Mail className="w-4 h-4 text-[#F2D06B]" />
+                <h3 className="text-sm font-bold">Update Registered Email</h3>
+              </div>
+              <form
+                autoComplete="on"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setSecEmailErr('');
+                  setSecEmailSuccess('');
+
+                  if (!secEmailOtpStep) {
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(secNewEmail.trim())) {
+                      setSecEmailErr('Please enter a valid new email address.');
+                      return;
+                    }
+                    if (secNewEmail.trim().toLowerCase() === (client.email || '').toLowerCase()) {
+                      setSecEmailErr('New email address matches your current registered email.');
+                      return;
+                    }
+                    setSecEmailBusy(true);
+                    const res = await requestAccountEmailChange(secNewEmail.trim());
+                    setSecEmailBusy(false);
+                    if (!res.ok) {
+                      setSecEmailErr(res.error || 'Could not initiate email change.');
+                      return;
+                    }
+                    setSecEmailOtpCode('');
+                    setSecEmailOtpStep(true);
+                    return;
+                  }
+
+                  const cleanCode = secEmailOtpCode.replace(/\s+/g, '');
+                  if (cleanCode.length !== 6) {
+                    setSecEmailErr('Enter the 6-digit verification code sent to your new email.');
+                    return;
+                  }
+                  setSecEmailBusy(true);
+                  const res = await verifyAccountEmailChange(secNewEmail.trim(), cleanCode);
+                  setSecEmailBusy(false);
+                  if (!res.ok) {
+                    setSecEmailErr(res.error || 'Email verification code was invalid or expired.');
+                    return;
+                  }
+                  setSecEmailOtpStep(false);
+                  setSecEmailOtpCode('');
+                  setSecNewEmail('');
+                  setSecEmailSuccess('Registered email verified and updated across Auth & vault records.');
+                }}
+                className="p-5 space-y-4 flex-1 flex flex-col justify-between"
+              >
+                <div className="space-y-3.5">
+                  <div className="text-xs bg-[#F8FAFC] border border-slate-200 rounded p-2.5">
+                    <span className="text-slate-500 block">Current Registered Email</span>
+                    <span className="font-semibold text-[#0D1F3C] break-all">{client.email}</span>
+                  </div>
+
+                  <div>
+                    <label htmlFor="sec-new-email" className="block text-xs font-semibold text-slate-700 mb-1">
+                      New Email Address
+                    </label>
+                    <input
+                      id="sec-new-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      required
+                      disabled={secEmailOtpStep}
+                      value={secNewEmail}
+                      onChange={(e) => setSecNewEmail(e.target.value)}
+                      placeholder="new.address@domain.com"
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C] disabled:bg-slate-50"
+                    />
+                  </div>
+
+                  {secEmailOtpStep && (
+                    <div>
+                      <label htmlFor="sec-email-otp" className="block text-xs font-semibold text-slate-700 mb-1">
+                        6-Digit Verification Code
+                      </label>
+                      <input
+                        id="sec-email-otp"
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        required
+                        autoFocus
+                        value={secEmailOtpCode}
+                        onChange={(e) => setSecEmailOtpCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full px-3 py-2 text-center text-base font-mono font-bold tracking-[0.35em] border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        Enter the 6-digit confirmation code sent to {secNewEmail.trim()}.
+                      </p>
+                    </div>
+                  )}
+
+                  {secEmailErr && (
+                    <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{secEmailErr}</span>
+                    </div>
+                  )}
+
+                  {secEmailSuccess && (
+                    <div className="flex items-start gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-2.5">
+                      <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{secEmailSuccess}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {secEmailOtpStep && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSecEmailOtpStep(false);
+                        setSecEmailOtpCode('');
+                        setSecEmailErr('');
+                      }}
+                      className="px-3 py-2.5 border border-slate-300 rounded text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={secEmailBusy}
+                    className="flex-1 py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-xs sm:text-sm rounded transition-colors"
+                  >
+                    {secEmailBusy
+                      ? 'Verifying...'
+                      : secEmailOtpStep
+                      ? 'Confirm 6-Digit Email Code'
+                      : 'Send Verification Code'}
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Card 3: Two-Factor Email OTP Status & Strict Sign-Out */}
+            <div className="bg-white border border-slate-200 rounded overflow-hidden flex flex-col">
+              <div className="bg-[#0A162B] px-5 py-3.5 text-white flex items-center gap-2">
+                <Lock className="w-4 h-4 text-[#F2D06B]" />
+                <h3 className="text-sm font-bold">Two-Factor OTP &amp; Session</h3>
+              </div>
+              <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
+                <div className="space-y-3.5">
+                  <div className="p-3 rounded bg-emerald-50 border border-emerald-200">
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                      <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span>Active — 6-Digit Email OTP Enforced on Every Login</span>
+                    </div>
+                    <p className="text-[11px] text-emerald-700 mt-1 leading-relaxed">
+                      Every sign-in verifies both your saved password and a fresh single-use 6-digit email passcode before granting vault custody access.
+                    </p>
+                  </div>
+
+                  <dl className="divide-y divide-slate-100 text-xs border border-slate-200 rounded px-3 bg-[#FAFBFD]">
+                    <div className="py-2.5 flex items-center justify-between gap-2">
+                      <dt className="text-slate-500">Vault Account ID</dt>
+                      <dd className="font-mono font-bold text-[#0D1F3C]">{client.vault_id || 'BS-SG'}</dd>
+                    </div>
+                    <div className="py-2.5 flex items-center justify-between gap-2">
+                      <dt className="text-slate-500">Last Sign-In Timestamp</dt>
+                      <dd className="font-mono text-slate-800 text-right">
+                        {lastSignInAt ? new Date(lastSignInAt).toLocaleString() : 'Current Session'}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="w-full py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs sm:text-sm rounded transition-colors flex items-center justify-center gap-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out / Log Out Securely</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
