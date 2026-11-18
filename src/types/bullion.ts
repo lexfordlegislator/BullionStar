@@ -45,6 +45,24 @@ export interface CartItem {
   fulfillment: 'Vault Storage (Singapore)' | 'Showroom Pickup (45 New Bridge Rd)' | 'Insured Delivery';
 }
 
+export type UploadedMediaCategory =
+  | 'Gold Photo'
+  | 'Silver Photo'
+  | 'Diamond Photo'
+  | 'Vault Certificate / PDF Document'
+  | 'Assay / Insurance Report';
+
+export interface UploadedMediaItem {
+  id: string;
+  title: string;
+  category: UploadedMediaCategory;
+  file_url: string;
+  file_type: string;
+  uploaded_at: string;
+  storage_path?: string;
+  file_name?: string;
+}
+
 /**
  * Single authoritative Supabase table: `clients`
  */
@@ -60,6 +78,7 @@ export interface ClientRow {
   silver_kg: number;
   diamond_carats: number;
   diamond_value_usd: number;
+  uploaded_media?: UploadedMediaItem[] | null;
   created_at?: string;
 }
 

@@ -6,7 +6,11 @@ import {
   Camera,
   CheckCircle2,
   Download,
+  ExternalLink,
   FileCheck2,
+  FileText,
+  FolderOpen,
+  Image as ImageIcon,
   KeyRound,
   Lock,
   LogOut,
@@ -22,10 +26,23 @@ import {
 } from 'lucide-react';
 import { AUDIT_REPORTS } from '../data/initialData';
 import { useBullion } from '../context/BullionContext';
-import { CurrencyCode, VaultCertificateSummary, VaultHoldingItem } from '../types/bullion';
+import {
+  CurrencyCode,
+  UploadedMediaItem,
+  VaultCertificateSummary,
+  VaultHoldingItem,
+} from '../types/bullion';
 import { ResilientImage } from './ResilientImage';
 
-type AccountTab = 'overview' | 'holdings' | 'certificates' | 'photos' | 'audits' | 'history' | 'security';
+type AccountTab =
+  | 'overview'
+  | 'holdings'
+  | 'certificates'
+  | 'photos'
+  | 'documents'
+  | 'audits'
+  | 'history'
+  | 'security';
 
 export const ClientPortal: React.FC = () => {
   const {
@@ -96,6 +113,74 @@ export const ClientPortal: React.FC = () => {
   const [secEmailBusy, setSecEmailBusy] = useState(false);
   const [secEmailErr, setSecEmailErr] = useState('');
   const [secEmailSuccess, setSecEmailSuccess] = useState('');
+
+  // Photos & Documents Modals
+  const [lightboxMedia, setLightboxMedia] = useState<{
+    title: string;
+    file_url: string;
+    badge?: string;
+    subtitle?: string;
+  } | null>(null);
+  const [lightboxZoomed, setLightboxZoomed] = useState(false);
+  const [previewDoc, setPreviewDoc] = useState<UploadedMediaItem | null>(null);
+
+  const uploadedMedia: UploadedMediaItem[] = Array.isArray(client.uploaded_media)
+    ? client.uploaded_media
+    : [];
+
+  const isPhotoMedia = (item: UploadedMediaItem): boolean => {
+    const cat = (item.category || '').toLowerCase();
+    const mime = (item.file_type || '').toLowerCase();
+    const url = (item.file_url || '').toLowerCase();
+    if (cat.includes('photo')) return true;
+    if (mime.startsWith('image/')) return true;
+    return /\.(png|jpe?g|webp|gif|bmp)(\?|$)/i.test(url);
+  };
+
+  const photoBadgeLabel = (category: UploadedMediaItem['category']): string => {
+    if (category === 'Gold Photo') return 'Gold Bullion';
+    if (category === 'Silver Photo') return 'Silver Bullion';
+    if (category === 'Diamond Photo') return 'GIA Diamond';
+    return 'Vault Custody';
+  };
+
+  const docBadgeLabel = (category: UploadedMediaItem['category']): string => {
+    if (category === 'Assay / Insurance Report') return 'Assay / Insurance Report';
+    if (category === 'Vault Certificate / PDF Document') return 'Vault Certificate';
+    return category;
+  };
+
+  const uploadedPhotos = uploadedMedia.filter(isPhotoMedia);
+  const uploadedDocuments = uploadedMedia.filter((item) => !isPhotoMedia(item));
+
+  const triggerDownload = async (url: string, filename: string) => {
+    try {
+      if (url.startsWith('data:')) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        return;
+      }
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.click();
+    }
+  };
 
   const cashUSD = Number(client.cash_usd || 0);
   const goldKg = Number(client.gold_kg || 0);
@@ -342,30 +427,41 @@ export const ClientPortal: React.FC = () => {
         </div>
       </div>
 
-      {/* Sub-Navigation Tabs */}
-      <div className="bg-white border border-slate-200 rounded p-1.5 flex flex-wrap gap-1">
-        {[
-          { id: 'overview' as AccountTab, label: 'Cash & Asset Dashboard' },
-          { id: 'holdings' as AccountTab, label: `Vault Holdings (${holdings.length})` },
-          { id: 'certificates' as AccountTab, label: `Vault Certificate` },
-          { id: 'photos' as AccountTab, label: 'High-Res Photo Verification' },
-          { id: 'audits' as AccountTab, label: 'Audit & Insurance Reports' },
-          { id: 'history' as AccountTab, label: `Transactions (${transactions.length})` },
-          { id: 'security' as AccountTab, label: 'Security & Account Settings' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-xs sm:text-sm font-semibold rounded-sm transition-colors whitespace-nowrap shrink-0 ${
-              activeTab === tab.id
-                ? 'bg-[#0D1F3C] text-white'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-[#0D1F3C]'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* Left Navigation Sidebar + Main Content Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <aside className="lg:col-span-3 bg-white border border-slate-200 rounded-md overflow-hidden lg:sticky lg:top-40">
+          <div className="bg-[#0A162B] px-4 py-3 text-white border-b border-[#1D3A68]">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#F2D06B]">
+              Depository Menu
+            </p>
+          </div>
+          <nav aria-label="Client dashboard navigation" className="p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible">
+            {[
+              { id: 'overview' as AccountTab, label: 'Cash & Asset Dashboard' },
+              { id: 'holdings' as AccountTab, label: `Vault Holdings (${holdings.length})` },
+              { id: 'certificates' as AccountTab, label: 'Vault Certificate' },
+              { id: 'photos' as AccountTab, label: 'High-Res Photo Verification' },
+              { id: 'documents' as AccountTab, label: `Photos & Documents (${uploadedMedia.length})` },
+              { id: 'audits' as AccountTab, label: 'Audit & Insurance Reports' },
+              { id: 'history' as AccountTab, label: `Transactions (${transactions.length})` },
+              { id: 'security' as AccountTab, label: 'Security & Account Settings' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-3.5 py-2.5 text-left text-xs sm:text-sm font-semibold rounded-sm transition-colors whitespace-nowrap lg:whitespace-normal shrink-0 flex items-center justify-between gap-2 ${
+                  activeTab === tab.id
+                    ? 'bg-[#0D1F3C] text-[#F2D06B] border-l-4 border-[#C59B27]'
+                    : 'text-slate-700 hover:bg-[#F4F6F9] hover:text-[#0D1F3C] border-l-4 border-transparent'
+                }`}
+              >
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="lg:col-span-9 min-w-0 space-y-6">
 
       {/* TAB 1: Cash & Asset Dashboard */}
       {activeTab === 'overview' && (
@@ -772,16 +868,45 @@ export const ClientPortal: React.FC = () => {
                       Documentary Vault Verification · {activePhotoHolding.vault_bay}
                     </span>
                   </div>
-                  <button
-                    onClick={() => setPhotoZoomed(!photoZoomed)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs font-medium"
-                  >
-                    <ZoomIn className="w-3.5 h-3.5" />
-                    <span>{photoZoomed ? 'Reset Zoom' : 'Inspect 2x Magnification'}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPhotoZoomed(!photoZoomed)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs font-medium"
+                    >
+                      <ZoomIn className="w-3.5 h-3.5" />
+                      <span>{photoZoomed ? 'Reset Zoom' : 'Inspect 2x Magnification'}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLightboxZoomed(false);
+                        setLightboxMedia({
+                          title: activePhotoHolding.item_name,
+                          file_url: activePhotoHolding.photo_url,
+                          badge: activePhotoHolding.weight_or_carats,
+                          subtitle: `${activePhotoHolding.serial_number} · ${activePhotoHolding.vault_bay}`,
+                        });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 rounded text-xs font-medium"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Full-Screen</span>
+                    </button>
+                    <button
+                      onClick={() =>
+                        triggerDownload(
+                          activePhotoHolding.photo_url,
+                          `${client.vault_id || 'Vault'}_${activePhotoHolding.serial_number}.jpg`
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded text-xs font-bold"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </button>
+                  </div>
                 </div>
 
-                <div className="bg-slate-900 overflow-hidden aspect-[4/3] max-h-[440px] relative">
+                <div className="bg-[#090D16] overflow-hidden aspect-[10/7] relative">
                   <div
                     className={`w-full h-full transition-transform duration-300 ${
                       photoZoomed ? 'scale-150 cursor-zoom-out' : 'scale-100 cursor-zoom-in'
@@ -791,6 +916,7 @@ export const ClientPortal: React.FC = () => {
                     <ResilientImage
                       src={activePhotoHolding.photo_url}
                       alt={`Vault verification of ${activePhotoHolding.item_name}`}
+                      className="w-full h-full object-contain"
                     />
                   </div>
                 </div>
@@ -826,6 +952,192 @@ export const ClientPortal: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: Photos & Documents (Admin-uploaded real client files) */}
+      {activeTab === 'documents' && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded p-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold text-[#0D1F3C]">Photos &amp; Documents</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Physical intake photos, assay certificates, GIA dossiers, and custody receipts issued for {client.vault_id || 'your account'}
+              </p>
+            </div>
+            <button
+              onClick={refreshClientSession}
+              disabled={refreshingClient}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-slate-300 hover:bg-slate-50 rounded text-xs font-semibold text-[#0D1F3C]"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#B38818] ${refreshingClient ? 'animate-spin' : ''}`} />
+              <span>{refreshingClient ? 'Refreshing...' : 'Refresh Files'}</span>
+            </button>
+          </div>
+
+          {uploadedMedia.length === 0 ? (
+            <div className="bg-white border border-dashed border-slate-300 rounded-md p-12 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-[#F4F6F9] border border-slate-200 flex items-center justify-center mx-auto">
+                <FolderOpen className="w-6 h-6 text-[#B38818]" />
+              </div>
+              <p className="text-sm font-semibold text-[#0D1F3C]">
+                No custom physical intake photos or signed documents uploaded yet.
+              </p>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                When your custody officer uploads intake photographs, GIA reports, or signed vault certificates, they will appear here automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Section A: Uploaded Vault Asset Photos */}
+              <div className="bg-white border border-slate-200 rounded p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-[#B38818]" />
+                    <h3 className="text-base font-bold text-[#0D1F3C]">
+                      Uploaded Vault Asset Photos ({uploadedPhotos.length})
+                    </h3>
+                  </div>
+                </div>
+
+                {uploadedPhotos.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-4">
+                    No physical asset photographs uploaded yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    {uploadedPhotos.map((item) => (
+                      <div
+                        key={item.id}
+                        className="border-2 border-[#0D1F3C]/15 rounded-md overflow-hidden bg-[#FAFBFD] flex flex-col justify-between shadow-xs"
+                      >
+                        <div>
+                          <div
+                            onClick={() => {
+                              setLightboxZoomed(false);
+                              setLightboxMedia({
+                                title: item.title,
+                                file_url: item.file_url,
+                                badge: photoBadgeLabel(item.category),
+                                subtitle: `Uploaded ${new Date(item.uploaded_at).toLocaleDateString()}`,
+                              });
+                            }}
+                            className="aspect-[4/3] bg-slate-900 relative overflow-hidden cursor-zoom-in group"
+                          >
+                            <img
+                              src={item.file_url}
+                              alt={item.title}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <span className="absolute top-3 left-3 px-2.5 py-1 rounded-sm bg-[#0A162B]/90 border border-[#C59B27]/50 text-[#F2D06B] text-[11px] font-bold">
+                              {photoBadgeLabel(item.category)}
+                            </span>
+                            <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-sm bg-black/70 text-white text-[11px] font-medium inline-flex items-center gap-1">
+                              <ZoomIn className="w-3 h-3" />
+                              <span>Inspect Full-Screen</span>
+                            </span>
+                          </div>
+                          <div className="p-4">
+                            <h4 className="text-sm font-bold text-[#0D1F3C] leading-snug">{item.title}</h4>
+                            <p className="text-[11px] font-mono text-slate-500 mt-1">
+                              Uploaded {new Date(item.uploaded_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="px-4 pb-4 flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setLightboxZoomed(false);
+                              setLightboxMedia({
+                                title: item.title,
+                                file_url: item.file_url,
+                                badge: photoBadgeLabel(item.category),
+                                subtitle: `Uploaded ${new Date(item.uploaded_at).toLocaleDateString()}`,
+                              });
+                            }}
+                            className="flex-1 py-2 px-3 bg-[#0D1F3C] hover:bg-[#193561] text-white text-xs font-semibold rounded inline-flex items-center justify-center gap-1.5"
+                          >
+                            <ZoomIn className="w-3.5 h-3.5 text-[#F2D06B]" />
+                            <span>Full-Screen Zoom</span>
+                          </button>
+                          <button
+                            onClick={() => triggerDownload(item.file_url, item.file_name || `${item.title}.jpg`)}
+                            className="py-2 px-3 border border-slate-300 hover:bg-white text-[#0D1F3C] text-xs font-semibold rounded inline-flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Section B: Official Vault Documents & Certificates */}
+              <div className="bg-white border border-slate-200 rounded p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#B38818]" />
+                    <h3 className="text-base font-bold text-[#0D1F3C]">
+                      Official Vault Documents &amp; Certificates ({uploadedDocuments.length})
+                    </h3>
+                  </div>
+                </div>
+
+                {uploadedDocuments.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-4">
+                    No official vault certificates or PDF documents uploaded yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {uploadedDocuments.map((doc) => (
+                      <div
+                        key={doc.id}
+                        className="border border-slate-200 rounded p-4 bg-[#FAFBFD] flex flex-col justify-between gap-4"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded bg-[#0D1F3C] text-[#F2D06B] flex items-center justify-center shrink-0">
+                            <FileText className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="inline-block px-2 py-0.5 rounded-sm bg-[#FAF7EC] border border-[#C59B27]/40 text-[#9A720F] text-[10px] font-bold uppercase tracking-wide mb-1">
+                              {docBadgeLabel(doc.category)}
+                            </span>
+                            <h4 className="text-sm font-bold text-[#0D1F3C] leading-snug break-words">
+                              {doc.title}
+                            </h4>
+                            <p className="text-[11px] font-mono text-slate-500 mt-1 truncate">
+                              {doc.file_name || 'Vault Document'} · {new Date(doc.uploaded_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-3 border-t border-slate-200">
+                          <button
+                            onClick={() => setPreviewDoc(doc)}
+                            className="flex-1 py-2 px-3 bg-[#0D1F3C] hover:bg-[#193561] text-white text-xs font-semibold rounded inline-flex items-center justify-center gap-1.5"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5 text-[#F2D06B]" />
+                            <span>View Document</span>
+                          </button>
+                          <button
+                            onClick={() => triggerDownload(doc.file_url, doc.file_name || doc.title)}
+                            className="py-2 px-3 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] text-xs font-bold rounded inline-flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Download</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1265,6 +1577,8 @@ export const ClientPortal: React.FC = () => {
           </div>
         </div>
       )}
+        </div>
+      </div>
 
       {/* Official Certificate Modal */}
       {certPreview && (
@@ -1561,6 +1875,148 @@ export const ClientPortal: React.FC = () => {
                 {tradeBusy ? 'Executing...' : `Execute ${tradeSide} Order Now`}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Full-Screen Photo Zoom Inspection Modal */}
+      {lightboxMedia && (
+        <div className="fixed inset-0 z-50 bg-slate-950/90 flex flex-col p-4 sm:p-6">
+          <div className="max-w-6xl w-full mx-auto flex items-center justify-between gap-4 pb-3 text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                {lightboxMedia.badge && (
+                  <span className="px-2 py-0.5 rounded bg-[#C59B27] text-[#0A162B] text-[11px] font-bold">
+                    {lightboxMedia.badge}
+                  </span>
+                )}
+                <h3 className="text-sm sm:text-base font-bold truncate">{lightboxMedia.title}</h3>
+              </div>
+              {lightboxMedia.subtitle && (
+                <p className="text-xs font-mono text-slate-300 mt-0.5">{lightboxMedia.subtitle}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setLightboxZoomed(!lightboxZoomed)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs font-semibold"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+                <span>{lightboxZoomed ? '1x Fit' : '2x Zoom'}</span>
+              </button>
+              <button
+                onClick={() => triggerDownload(lightboxMedia.file_url, `${lightboxMedia.title}.jpg`)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download</span>
+              </button>
+              <button
+                onClick={() => setLightboxMedia(null)}
+                aria-label="Close full-screen photo inspection"
+                className="p-1.5 hover:bg-white/10 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div
+            onClick={() => setLightboxZoomed(!lightboxZoomed)}
+            className="flex-1 max-w-6xl w-full mx-auto bg-black/60 border border-white/10 rounded overflow-auto flex items-center justify-center p-2"
+          >
+            <img
+              src={lightboxMedia.file_url}
+              alt={lightboxMedia.title}
+              referrerPolicy="no-referrer"
+              className={`max-h-full max-w-full object-contain transition-transform duration-300 ${
+                lightboxZoomed ? 'scale-150 cursor-zoom-out' : 'scale-100 cursor-zoom-in'
+              }`}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Document Preview Modal */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 bg-slate-900/75 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-md max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="bg-[#0D1F3C] text-white px-5 py-3.5 flex items-center justify-between gap-4 shrink-0">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold text-[#F2D06B]">
+                  {docBadgeLabel(previewDoc.category)}
+                </p>
+                <h3 className="text-sm font-bold truncate">{previewDoc.title}</h3>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={previewDoc.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs font-semibold"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open in Tab</span>
+                </a>
+                <button
+                  onClick={() =>
+                    triggerDownload(previewDoc.file_url, previewDoc.file_name || previewDoc.title)
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </button>
+                <button
+                  onClick={() => setPreviewDoc(null)}
+                  aria-label="Close document preview"
+                  className="p-1.5 hover:bg-white/10 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-slate-100 overflow-hidden">
+              {previewDoc.file_type?.includes('pdf') ||
+              previewDoc.file_url.toLowerCase().includes('.pdf') ? (
+                <iframe
+                  src={previewDoc.file_url}
+                  title={previewDoc.title}
+                  className="w-full h-full border-0"
+                />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
+                  <FileText className="w-12 h-12 text-[#0D1F3C]" />
+                  <div>
+                    <h4 className="text-base font-bold text-[#0D1F3C]">{previewDoc.title}</h4>
+                    <p className="text-xs text-slate-600 mt-1">
+                      {previewDoc.file_name || 'Custody Document'} · Ready to open or download
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={previewDoc.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-[#0D1F3C] text-white text-xs font-semibold rounded inline-flex items-center gap-1.5"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Open Document</span>
+                    </a>
+                    <button
+                      onClick={() =>
+                        triggerDownload(previewDoc.file_url, previewDoc.file_name || previewDoc.title)
+                      }
+                      className="px-4 py-2 bg-[#C59B27] text-[#0A162B] text-xs font-bold rounded inline-flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download File</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

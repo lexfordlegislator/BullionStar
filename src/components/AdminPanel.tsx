@@ -1,17 +1,33 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
   Check,
+  ExternalLink,
+  FileText,
+  FolderOpen,
+  Image as ImageIcon,
   KeyRound,
+  Loader2,
   Lock,
   LogOut,
   RefreshCw,
   Search,
   Shield,
+  Trash2,
+  Upload,
   Users,
 } from 'lucide-react';
 import { AdminClientBalanceUpdate, useBullion } from '../context/BullionContext';
+import { UploadedMediaCategory, UploadedMediaItem } from '../types/bullion';
+
+const MEDIA_CATEGORY_OPTIONS: { value: UploadedMediaCategory; label: string }[] = [
+  { value: 'Gold Photo', label: 'Gold Photo' },
+  { value: 'Silver Photo', label: 'Silver Photo' },
+  { value: 'Diamond Photo', label: 'Diamond Photo' },
+  { value: 'Vault Certificate / PDF Document', label: 'Vault Certificate / PDF Document' },
+  { value: 'Assay / Insurance Report', label: 'Assay / Insurance Report' },
+];
 
 export const AdminPanel: React.FC = () => {
   const {
@@ -24,6 +40,8 @@ export const AdminPanel: React.FC = () => {
     adminResetToDefaultPasscode,
     fetchAdminClients,
     adminSaveClientRow,
+    adminUploadClientMedia,
+    adminDeleteClientMedia,
     exitHiddenAdmin,
   } = useBullion();
 
@@ -45,6 +63,17 @@ export const AdminPanel: React.FC = () => {
   const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
+  // Per-client Photos & Documents Manager state
+  const [selectedMediaClientId, setSelectedMediaClientId] = useState<string>('');
+  const [mediaCategory, setMediaCategory] = useState<UploadedMediaCategory>('Gold Photo');
+  const [mediaTitle, setMediaTitle] = useState('');
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [mediaError, setMediaError] = useState('');
+  const [mediaNotice, setMediaNotice] = useState('');
+  const [deletingMediaId, setDeletingMediaId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     const nextDrafts: Record<string, AdminClientBalanceUpdate> = {};
     adminClients.forEach((c) => {
@@ -59,6 +88,17 @@ export const AdminPanel: React.FC = () => {
     setDrafts(nextDrafts);
   }, [adminClients]);
 
+  useEffect(() => {
+    if (adminClients.length === 0) {
+      setSelectedMediaClientId('');
+      return;
+    }
+    const stillExists = adminClients.some((c) => c.id === selectedMediaClientId);
+    if (!stillExists) {
+      setSelectedMediaClientId(adminClients[0].id);
+    }
+  }, [adminClients, selectedMediaClientId]);
+
   const filteredClients = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     if (!q) return adminClients;
@@ -69,6 +109,16 @@ export const AdminPanel: React.FC = () => {
         (c.vault_id || '').toLowerCase().includes(q)
     );
   }, [adminClients, searchTerm]);
+
+  const selectedMediaClient = useMemo(
+    () => adminClients.find((c) => c.id === selectedMediaClientId) || null,
+    [adminClients, selectedMediaClientId]
+  );
+
+  const selectedClientMedia: UploadedMediaItem[] = useMemo(
+    () => (Array.isArray(selectedMediaClient?.uploaded_media) ? selectedMediaClient.uploaded_media : []),
+    [selectedMediaClient]
+  );
 
   const updateDraftField = (
     clientId: string,
@@ -110,6 +160,72 @@ export const AdminPanel: React.FC = () => {
     }, 3500);
   };
 
+  const handleOpenMediaManagerForClient = (clientId: string) => {
+    setSelectedMediaClientId(clientId);
+    setMediaError('');
+    setMediaNotice('');
+    setTimeout(() => {
+      const el = document.getElementById('admin-media-manager');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 40);
+  };
+
+  const handleUploadMedia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMediaError('');
+    setMediaNotice('');
+    if (!selectedMediaClient) {
+      setMediaError('Please select a registered client first.');
+      return;
+    }
+    if (!mediaFile) {
+      setMediaError('Please select an image or document file to upload.');
+      return;
+    }
+    setMediaUploading(true);
+    const res = await adminUploadClientMedia(selectedMediaClient.id, {
+      title: mediaTitle.trim() || mediaFile.name,
+      category: mediaCategory,
+      file: mediaFile,
+    });
+    setMediaUploading(false);
+    if (!res.ok) {
+      setMediaError(res.error || 'Failed to upload file.');
+      return;
+    }
+    setMediaTitle('');
+    setMediaFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setMediaNotice(
+      `Uploaded and attached to ${selectedMediaClient.full_name} (${selectedMediaClient.vault_id}).`
+    );
+  };
+
+  const handleDeleteMedia = async (item: UploadedMediaItem) => {
+    if (!selectedMediaClient) return;
+    setMediaError('');
+    setMediaNotice('');
+    setDeletingMediaId(item.id);
+    const res = await adminDeleteClientMedia(selectedMediaClient.id, item);
+    setDeletingMediaId(null);
+    if (!res.ok) {
+      setMediaError(res.error || 'Failed to delete media item.');
+      return;
+    }
+    setMediaNotice(`Deleted "${item.title}" from ${selectedMediaClient.full_name}.`);
+  };
+
+  const isImageItem = (item: UploadedMediaItem) => {
+    if (item.file_type?.startsWith('image/')) return true;
+    return (
+      item.category === 'Gold Photo' ||
+      item.category === 'Silver Photo' ||
+      item.category === 'Diamond Photo'
+    );
+  };
+
   if (!adminAuthenticated) {
     return (
       <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-12">
@@ -136,7 +252,7 @@ export const AdminPanel: React.FC = () => {
             className="p-6 space-y-4"
           >
             <p className="text-xs text-slate-600 leading-relaxed">
-              Authorized custody personnel only. Enter the operations passcode to manage registered client balances in the Supabase <span className="font-mono">clients</span> table.
+              Authorized custody personnel only. Enter the operations passcode to manage registered client balances and vault files in the Supabase <span className="font-mono">clients</span> table.
             </p>
 
             <div>
@@ -213,9 +329,9 @@ export const AdminPanel: React.FC = () => {
             <Shield className="w-4 h-4" />
             <span>Staff &amp; Vault Operations · Supabase clients Table</span>
           </div>
-          <h1 className="font-serif text-2xl font-bold">Client Balances &amp; Custody Allocation</h1>
+          <h1 className="font-serif text-2xl font-bold">Client Balances, Photos &amp; Custody Allocation</h1>
           <p className="text-xs text-slate-300 mt-1">
-            Edit Cash ($), Gold (kg), Silver (kg), Diamond Carats, and Diamond Value ($) directly for any registered client.
+            Edit Cash ($), Gold (kg), Silver (kg), Diamond Carats, Diamond Value ($), and upload client intake photos or signed documents.
           </p>
         </div>
 
@@ -361,7 +477,7 @@ export const AdminPanel: React.FC = () => {
                 <th className="py-3 px-3 text-left font-semibold">Silver (kg)</th>
                 <th className="py-3 px-3 text-left font-semibold">Diamond Carats</th>
                 <th className="py-3 px-3 text-left font-semibold">Diamond Value ($)</th>
-                <th className="py-3 px-4 text-right font-semibold">Action</th>
+                <th className="py-3 px-4 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -376,9 +492,16 @@ export const AdminPanel: React.FC = () => {
                 const isSaving = savingId === c.id;
                 const isSaved = Boolean(savedIds[c.id]);
                 const rowErr = rowErrors[c.id];
+                const mediaCount = Array.isArray(c.uploaded_media) ? c.uploaded_media.length : 0;
+                const isMediaSelected = selectedMediaClientId === c.id;
 
                 return (
-                  <tr key={c.id} className="hover:bg-[#FAFBFD] align-middle">
+                  <tr
+                    key={c.id}
+                    className={`align-middle transition-colors ${
+                      isMediaSelected ? 'bg-[#FFFDF5]' : 'hover:bg-[#FAFBFD]'
+                    }`}
+                  >
                     <td className="py-3.5 px-4 min-w-[210px]">
                       <div className="font-bold text-sm text-[#0D1F3C]">{c.full_name}</div>
                       <div className="text-slate-600 font-medium">{c.email}</div>
@@ -451,13 +574,25 @@ export const AdminPanel: React.FC = () => {
                     </td>
 
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-2.5">
+                      <div className="inline-flex items-center gap-2">
                         {isSaved && (
                           <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
                             <Check className="w-4 h-4" />
                             <span>Saved!</span>
                           </span>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenMediaManagerForClient(c.id)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded text-xs font-semibold transition-colors ${
+                            isMediaSelected
+                              ? 'bg-[#0D1F3C] text-white border-[#0D1F3C]'
+                              : 'bg-white text-[#0D1F3C] border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <FolderOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
+                          <span>Photos &amp; Docs ({mediaCount})</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleSaveRow(c.id)}
@@ -484,6 +619,241 @@ export const AdminPanel: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Part 3: Client Photos & Documents Uploader & Manager */}
+      <div
+        id="admin-media-manager"
+        className="bg-white border border-slate-200 rounded overflow-hidden"
+      >
+        <div className="bg-[#0A162B] px-6 py-4 text-white flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#F2D06B]">
+              <Upload className="w-4 h-4" />
+              <span>Supabase Storage (`vault-files`) · Per-Client Media Manager</span>
+            </div>
+            <h2 className="font-serif text-xl font-bold mt-0.5">
+              Client Photos &amp; Documents Uploader
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <label htmlFor="admin-media-client-select" className="text-xs text-slate-300 font-medium">
+              Selected Client:
+            </label>
+            <select
+              id="admin-media-client-select"
+              value={selectedMediaClientId}
+              onChange={(e) => {
+                setSelectedMediaClientId(e.target.value);
+                setMediaError('');
+                setMediaNotice('');
+              }}
+              disabled={adminClients.length === 0}
+              className="px-3 py-1.5 text-xs font-semibold bg-[#13294B] text-white border border-white/20 rounded focus:outline-none focus:border-[#D4AF37]"
+            >
+              {adminClients.length === 0 && <option value="">No clients available</option>}
+              {adminClients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.full_name} ({c.vault_id}) — {c.email}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {selectedMediaClient ? (
+            <>
+              <div className="bg-[#F8FAFC] border border-slate-200 rounded px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500">Managing vault files for: </span>
+                  <span className="font-bold text-[#0D1F3C]">{selectedMediaClient.full_name}</span>
+                  <span className="text-slate-400 mx-2">·</span>
+                  <span className="font-mono text-[#B38818] font-semibold">
+                    {selectedMediaClient.vault_id}
+                  </span>
+                  <span className="text-slate-400 mx-2">·</span>
+                  <span className="text-slate-600">{selectedMediaClient.email}</span>
+                </div>
+                <span className="text-[11px] font-mono text-slate-500">
+                  {selectedClientMedia.length} uploaded item{selectedClientMedia.length === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              {/* Upload Form */}
+              <form
+                onSubmit={handleUploadMedia}
+                className="grid md:grid-cols-12 gap-4 items-end border border-slate-200 rounded p-4 bg-[#FAFBFD]"
+              >
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Item Type / Category
+                  </label>
+                  <select
+                    value={mediaCategory}
+                    onChange={(e) => setMediaCategory(e.target.value as UploadedMediaCategory)}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
+                  >
+                    {MEDIA_CATEGORY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-4">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Title / Description
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={mediaTitle}
+                    onChange={(e) => setMediaTitle(e.target.value)}
+                    placeholder="e.g. 10kg Gold Bars Intake or GIA Dossier #21948572"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
+                  />
+                </div>
+
+                <div className="md:col-span-3">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Choose Photo or Document
+                  </label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx"
+                    required
+                    onChange={(e) => setMediaFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[#0D1F3C] file:text-white hover:file:bg-[#193561]"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <button
+                    type="submit"
+                    disabled={mediaUploading}
+                    className="w-full py-2.5 px-4 bg-[#D4AF37] hover:bg-[#B89225] disabled:opacity-60 text-[#0A162B] font-bold text-xs rounded transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    {mediaUploading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Upload File</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              {mediaError && (
+                <div className="flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-3">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{mediaError}</span>
+                </div>
+              )}
+
+              {mediaNotice && (
+                <div className="flex items-center gap-2 text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 rounded p-3">
+                  <Check className="w-4 h-4 shrink-0" />
+                  <span>{mediaNotice}</span>
+                </div>
+              )}
+
+              {/* Existing Uploaded Media List */}
+              <div>
+                <h3 className="text-sm font-bold text-[#0D1F3C] mb-3">
+                  Uploaded Photos &amp; Documents for {selectedMediaClient.full_name}
+                </h3>
+
+                {selectedClientMedia.length === 0 ? (
+                  <div className="border border-dashed border-slate-300 rounded p-8 text-center text-xs text-slate-500">
+                    No custom photos or documents uploaded for this client yet. Use the form above to attach files to{' '}
+                    <span className="font-mono">{selectedMediaClient.vault_id}</span>.
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {selectedClientMedia.map((item) => {
+                      const img = isImageItem(item);
+                      const isDeleting = deletingMediaId === item.id;
+                      return (
+                        <div
+                          key={item.id}
+                          className="border border-slate-200 rounded overflow-hidden bg-white flex flex-col"
+                        >
+                          {img ? (
+                            <div className="aspect-[16/10] bg-slate-900 overflow-hidden">
+                              <img
+                                src={item.file_url}
+                                alt={item.title}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-[16/10] bg-[#F8FAFC] border-b border-slate-200 flex flex-col items-center justify-center p-4 text-center">
+                              <FileText className="w-10 h-10 text-[#0D1F3C] mb-2" />
+                              <span className="text-[11px] font-mono text-slate-500 break-all line-clamp-2">
+                                {item.file_name || item.title}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="p-3.5 flex-1 flex flex-col justify-between gap-3 text-xs">
+                            <div>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide bg-[#0D1F3C]/5 text-[#0D1F3C] border border-[#0D1F3C]/15 rounded mb-1.5">
+                                {img ? (
+                                  <ImageIcon className="w-3 h-3 text-[#B38818]" />
+                                ) : (
+                                  <FileText className="w-3 h-3 text-[#B38818]" />
+                                )}
+                                {item.category}
+                              </span>
+                              <div className="font-bold text-[#0D1F3C] line-clamp-2">{item.title}</div>
+                              <div className="text-[11px] text-slate-400 mt-1">
+                                Uploaded {new Date(item.uploaded_at).toLocaleString()}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                              <a
+                                href={item.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs font-semibold text-[#0D1F3C] hover:text-[#B38818]"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                <span>Open File</span>
+                              </a>
+                              <button
+                                type="button"
+                                disabled={isDeleting}
+                                onClick={() => handleDeleteMedia(item)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-xs font-semibold disabled:opacity-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="text-xs text-slate-500 text-center py-6">
+              Select a client from the table or dropdown above to upload photos and documents.
+            </div>
+          )}
         </div>
       </div>
     </section>

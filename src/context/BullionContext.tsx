@@ -25,9 +25,12 @@ import {
   SpotPricesUSD,
   StockLocation,
   TransactionLogItem,
+  UploadedMediaCategory,
+  UploadedMediaItem,
   VaultCertificateSummary,
   VaultHoldingItem,
 } from '../types/bullion';
+import { generateVaultVerificationPhoto } from '../utils/vaultPhotoGenerator';
 
 interface ToastMessage {
   id: string;
@@ -159,6 +162,14 @@ interface BullionContextType {
     clientId: string,
     updates: AdminClientBalanceUpdate
   ) => Promise<{ ok: boolean; error?: string }>;
+  adminUploadClientMedia: (
+    clientId: string,
+    input: { title: string; category: UploadedMediaCategory; file: File }
+  ) => Promise<{ ok: boolean; error?: string }>;
+  adminDeleteClientMedia: (
+    clientId: string,
+    item: UploadedMediaItem
+  ) => Promise<{ ok: boolean; error?: string }>;
 
   toasts: ToastMessage[];
   dismissToast: (id: string) => void;
@@ -167,6 +178,19 @@ interface BullionContextType {
 const ADMIN_AUTH_KEY = 'bs_staff_ops_unlocked_v1';
 const ADMIN_PASSCODE_KEY = 'bs_staff_ops_passcode_v1';
 const PREFS_KEY = 'bs_prefs_v4';
+
+const normalizeUploadedMedia = (raw: unknown): UploadedMediaItem[] => {
+  if (Array.isArray(raw)) return raw as UploadedMediaItem[];
+  if (typeof raw === 'string' && raw.trim().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? (parsed as UploadedMediaItem[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
 
 const EMPTY_CLIENT: ClientRow = {
   id: '',
@@ -180,6 +204,7 @@ const EMPTY_CLIENT: ClientRow = {
   silver_kg: 0,
   diamond_carats: 0,
   diamond_value_usd: 0,
+  uploaded_media: [],
   created_at: '',
 };
 
@@ -398,6 +423,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         silver_kg: Number(row.silver_kg) || 0,
         diamond_carats: Number(row.diamond_carats) || 0,
         diamond_value_usd: Number(row.diamond_value_usd) || 0,
+        uploaded_media: normalizeUploadedMedia(row.uploaded_media),
       });
       setIsDemoMode(false);
       setIsLoggedIn(true);
@@ -900,45 +926,112 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     );
   }, [client, spotPriceMap]);
 
-  // Derive itemized holdings view cleanly from the `clients` row balances (or demo holdings)
+  // Derive itemized holdings + unique quantity-matched vault verification photography per client
   const holdings: VaultHoldingItem[] = useMemo(() => {
-    if (isDemoMode) return DEMO_HOLDINGS;
+    if (isDemoMode) {
+      return DEMO_HOLDINGS.map((h) => {
+        const isGold = h.item_name.toLowerCase().includes('gold');
+        const isSilver = h.item_name.toLowerCase().includes('silver');
+        const cat: 'Gold' | 'Silver' | 'Diamond' = isGold ? 'Gold' : isSilver ? 'Silver' : 'Diamond';
+        const qty = isGold
+          ? h.id === 'hld-001'
+            ? 2.0
+            : 0.3
+          : isSilver
+          ? Number(client.silver_kg || 15.55)
+          : Number(client.diamond_carats || 1.52);
+        const dynamicPhoto = generateVaultVerificationPhoto({
+          clientId: client.id || DEMO_CLIENT.id,
+          vaultId: client.vault_id || DEMO_CLIENT.vault_id,
+          clientName: client.full_name || DEMO_CLIENT.full_name,
+          category: cat,
+          quantityValue: qty,
+          diamondValueUSD: h.usd_value,
+          serialNumber: h.serial_number,
+          vaultBay: h.vault_bay,
+        });
+        return {
+          ...h,
+          photo_url: dynamicPhoto || h.photo_url,
+        };
+      });
+    }
+
     const list: VaultHoldingItem[] = [];
-    const suffix = (client.vault_id || 'SG001').slice(-4);
-    if (Number(client.gold_kg) > 0) {
+    const suffix = (client.vault_id || client.id || 'SG001').replace(/[^A-Z0-9]/gi, '').slice(-5).toUpperCase();
+    const goldKg = Number(client.gold_kg || 0);
+    const silverKg = Number(client.silver_kg || 0);
+    const diamondCt = Number(client.diamond_carats || 0);
+    const diamondVal = Number(client.diamond_value_usd || 0);
+
+    if (goldKg > 0) {
+      const serial = `BS-AU-${suffix}`;
+      const bay = `SG-VAULT-BAY04 · Locker ${suffix}`;
+      const photo = generateVaultVerificationPhoto({
+        clientId: client.id,
+        vaultId: client.vault_id,
+        clientName: client.full_name,
+        category: 'Gold',
+        quantityValue: goldKg,
+        serialNumber: serial,
+        vaultBay: bay,
+      });
       list.push({
         id: 'alloc-gold',
         item_name: `Allocated 999.9 Fine Gold Bullion`,
-        weight_or_carats: `${Number(client.gold_kg).toFixed(3)} kg`,
+        weight_or_carats: `${goldKg.toFixed(3)} kg`,
         purity_or_grade: '999.9 Fine Gold (LBMA)',
-        serial_number: `BS-AU-${suffix}`,
-        vault_bay: `SG-VAULT-BAY04 · Locker ${suffix}`,
-        photo_url: IMAGE_PATHS.vaultVerification,
-        usd_value: Number((Number(client.gold_kg) * spotPriceMap.Gold.kg).toFixed(2)),
+        serial_number: serial,
+        vault_bay: bay,
+        photo_url: photo || IMAGE_PATHS.vaultVerification,
+        usd_value: Number((goldKg * spotPriceMap.Gold.kg).toFixed(2)),
       });
     }
-    if (Number(client.silver_kg) > 0) {
+    if (silverKg > 0) {
+      const serial = `BS-AG-${suffix}`;
+      const bay = `SG-VAULT-SEC2 · Rack ${suffix}`;
+      const photo = generateVaultVerificationPhoto({
+        clientId: client.id,
+        vaultId: client.vault_id,
+        clientName: client.full_name,
+        category: 'Silver',
+        quantityValue: silverKg,
+        serialNumber: serial,
+        vaultBay: bay,
+      });
       list.push({
         id: 'alloc-silver',
         item_name: `Allocated 999.0 Fine Silver Cast Bars`,
-        weight_or_carats: `${Number(client.silver_kg).toFixed(3)} kg`,
+        weight_or_carats: `${silverKg.toFixed(3)} kg`,
         purity_or_grade: '999.0 Fine Silver (LBMA)',
-        serial_number: `BS-AG-${suffix}`,
-        vault_bay: `SG-VAULT-SEC2 · Rack ${suffix}`,
-        photo_url: IMAGE_PATHS.silverBar,
-        usd_value: Number((Number(client.silver_kg) * spotPriceMap.Silver.kg).toFixed(2)),
+        serial_number: serial,
+        vault_bay: bay,
+        photo_url: photo || IMAGE_PATHS.silverBar,
+        usd_value: Number((silverKg * spotPriceMap.Silver.kg).toFixed(2)),
       });
     }
-    if (Number(client.diamond_carats) > 0 || Number(client.diamond_value_usd) > 0) {
+    if (diamondCt > 0 || diamondVal > 0) {
+      const serial = `GIA-${suffix}884`;
+      const bay = `SG-VAULT-BAY04 · Locker ${suffix}`;
+      const photo = generateVaultVerificationPhoto({
+        clientId: client.id,
+        vaultId: client.vault_id,
+        clientName: client.full_name,
+        category: 'Diamond',
+        quantityValue: diamondCt > 0 ? diamondCt : 1.0,
+        diamondValueUSD: diamondVal,
+        serialNumber: serial,
+        vaultBay: bay,
+      });
       list.push({
         id: 'alloc-diamond',
         item_name: `GIA-Certified Investment Diamond Parcel`,
-        weight_or_carats: `${Number(client.diamond_carats).toFixed(2)} ct`,
+        weight_or_carats: `${diamondCt.toFixed(2)} ct`,
         purity_or_grade: 'GIA Certified · 3x Excellent',
-        serial_number: `GIA-${suffix}884`,
-        vault_bay: `SG-VAULT-BAY04 · Locker ${suffix}`,
-        photo_url: IMAGE_PATHS.diamond,
-        usd_value: Number(client.diamond_value_usd || 0),
+        serial_number: serial,
+        vault_bay: bay,
+        photo_url: photo || IMAGE_PATHS.diamond,
+        usd_value: diamondVal,
       });
     }
     return list;
@@ -1232,7 +1325,11 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (error) {
         return { ok: false, error: error.message };
       }
-      setAdminClients((data as ClientRow[]) || []);
+      const normalized = ((data as ClientRow[]) || []).map((row) => ({
+        ...row,
+        uploaded_media: normalizeUploadedMedia(row.uploaded_media),
+      }));
+      setAdminClients(normalized);
       return { ok: true };
     } finally {
       setAdminLoading(false);
@@ -1306,7 +1403,12 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { ok: false, error: error.message };
     }
 
-    const updatedRow = (data?.[0] as ClientRow) || null;
+    const updatedRow = data?.[0]
+      ? ({
+          ...(data[0] as ClientRow),
+          uploaded_media: normalizeUploadedMedia((data[0] as ClientRow).uploaded_media),
+        } as ClientRow)
+      : null;
     setAdminClients((prev) =>
       prev.map((row) => (row.id === clientId ? updatedRow || { ...row, ...cleanPayload } : row))
     );
@@ -1316,6 +1418,129 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     pushToast('Saved!', `Updated balances in clients table.`);
+    return { ok: true };
+  };
+
+  const adminUploadClientMedia = async (
+    clientId: string,
+    input: { title: string; category: UploadedMediaCategory; file: File }
+  ) => {
+    const targetClient = adminClients.find((c) => c.id === clientId);
+    const currentMedia = normalizeUploadedMedia(targetClient?.uploaded_media);
+
+    const safeFileName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = `${clientId}/${Date.now()}-${safeFileName}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from('vault-files')
+      .upload(filePath, input.file, {
+        upsert: false,
+        contentType: input.file.type || undefined,
+      });
+
+    if (uploadErr) {
+      return {
+        ok: false,
+        error: `Storage upload failed (${uploadErr.message}). Ensure the "vault-files" bucket exists in Supabase Storage with public read & upload policies.`,
+      };
+    }
+
+    const { data: urlData } = supabase.storage.from('vault-files').getPublicUrl(filePath);
+    const publicUrl = urlData.publicUrl;
+
+    const newItem: UploadedMediaItem = {
+      id: `media-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      title: input.title.trim() || input.file.name,
+      category: input.category,
+      file_url: publicUrl,
+      file_type:
+        input.file.type ||
+        (input.file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+      storage_path: filePath,
+      file_name: input.file.name,
+      uploaded_at: new Date().toISOString(),
+    };
+
+    const nextMedia = [newItem, ...currentMedia];
+
+    const { data, error: dbErr } = await supabase
+      .from('clients')
+      .update({ uploaded_media: nextMedia })
+      .eq('id', clientId)
+      .select('*')
+      .limit(1);
+
+    if (dbErr) {
+      return {
+        ok: false,
+        error: `File uploaded to storage, but updating clients.uploaded_media failed (${dbErr.message}). Ensure an "uploaded_media" jsonb column exists on the clients table.`,
+      };
+    }
+
+    const updatedRow = data?.[0]
+      ? ({
+          ...(data[0] as ClientRow),
+          uploaded_media: normalizeUploadedMedia((data[0] as ClientRow).uploaded_media),
+        } as ClientRow)
+      : null;
+
+    setAdminClients((prev) =>
+      prev.map((row) =>
+        row.id === clientId ? updatedRow || { ...row, uploaded_media: nextMedia } : row
+      )
+    );
+
+    if (isLoggedIn && !isDemoMode && client.id === clientId) {
+      setClient((prev) => updatedRow || { ...prev, uploaded_media: nextMedia });
+    }
+
+    pushToast('Media Uploaded', `"${newItem.title}" saved to client vault.`);
+    return { ok: true };
+  };
+
+  const adminDeleteClientMedia = async (clientId: string, item: UploadedMediaItem) => {
+    const targetClient = adminClients.find((c) => c.id === clientId);
+    const currentMedia = normalizeUploadedMedia(targetClient?.uploaded_media);
+    const nextMedia = currentMedia.filter((m) => m.id !== item.id);
+
+    // Best-effort storage cleanup
+    let storagePath = item.storage_path || '';
+    if (!storagePath && item.file_url.includes('/vault-files/')) {
+      storagePath = decodeURIComponent(item.file_url.split('/vault-files/')[1].split('?')[0]);
+    }
+    if (storagePath) {
+      await supabase.storage.from('vault-files').remove([storagePath]);
+    }
+
+    const { data, error: dbErr } = await supabase
+      .from('clients')
+      .update({ uploaded_media: nextMedia })
+      .eq('id', clientId)
+      .select('*')
+      .limit(1);
+
+    if (dbErr) {
+      return { ok: false, error: dbErr.message };
+    }
+
+    const updatedRow = data?.[0]
+      ? ({
+          ...(data[0] as ClientRow),
+          uploaded_media: normalizeUploadedMedia((data[0] as ClientRow).uploaded_media),
+        } as ClientRow)
+      : null;
+
+    setAdminClients((prev) =>
+      prev.map((row) =>
+        row.id === clientId ? updatedRow || { ...row, uploaded_media: nextMedia } : row
+      )
+    );
+
+    if (isLoggedIn && !isDemoMode && client.id === clientId) {
+      setClient((prev) => updatedRow || { ...prev, uploaded_media: nextMedia });
+    }
+
+    pushToast('Item Removed', `Removed "${item.title}" from client media.`);
     return { ok: true };
   };
 
@@ -1403,6 +1628,8 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         adminResetToDefaultPasscode,
         fetchAdminClients,
         adminSaveClientRow,
+        adminUploadClientMedia,
+        adminDeleteClientMedia,
         toasts,
         dismissToast,
       }}
