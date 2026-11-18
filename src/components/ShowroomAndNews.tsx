@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, CheckCircle2, Clock, MapPin, ShieldCheck, X } from 'lucide-react';
+import { Calendar, CheckCircle2, Clock, Mail, MapPin, ShieldCheck, X } from 'lucide-react';
 import { IMAGE_PATHS, MARKET_ARTICLES } from '../data/initialData';
 import { MarketArticle } from '../types/bullion';
 import { useBullion } from '../context/BullionContext';
@@ -76,6 +76,19 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
                     <p className="font-semibold text-[#0D1F3C]">Independent Verification</p>
                     <p className="text-slate-600 mt-0.5">BDO physical counts & live client tray photos</p>
                   </div>
+                </div>
+                <div className="sm:col-span-2 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                    <span className="font-semibold text-[#0D1F3C]">Direct Support:</span>
+                    <a
+                      href="mailto:info@bullionstar.in.net"
+                      className="font-semibold text-[#B38818] hover:text-[#0D1F3C] underline underline-offset-2"
+                    >
+                      info@bullionstar.in.net
+                    </a>
+                  </div>
+                  <span className="text-slate-500">bullionstar.in.net</span>
                 </div>
               </div>
             </div>

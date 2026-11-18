@@ -54,6 +54,7 @@ export interface AdminClientBalanceUpdate {
 interface BullionContextType {
   view: AppView;
   setView: (v: AppView) => void;
+  scrollToContact: () => void;
   openHiddenAdmin: () => void;
   exitHiddenAdmin: () => void;
   catalogFilter: MetalType | 'All';
@@ -279,6 +280,18 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const exitHiddenAdmin = () => {
     setView('home');
+  };
+
+  const scrollToContact = () => {
+    const scrollTarget = () => {
+      document.getElementById('contact-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    if (view !== 'home') {
+      setView('home');
+      setTimeout(scrollTarget, 80);
+    } else {
+      scrollTarget();
+    }
   };
 
   useEffect(() => {
@@ -1049,6 +1062,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       value={{
         view,
         setView,
+        scrollToContact,
         openHiddenAdmin,
         exitHiddenAdmin,
         catalogFilter,

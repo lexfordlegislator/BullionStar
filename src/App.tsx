@@ -16,6 +16,7 @@ import { CartDrawer } from './components/CartDrawer';
 import { Footer } from './components/Footer';
 import { ToastStack } from './components/ToastStack';
 import { AuthModal } from './components/AuthModal';
+import { ContactSection } from './components/ContactSection';
 
 const BullionStarShell: React.FC = () => {
   const { view } = useBullion();
@@ -32,6 +33,7 @@ const BullionStarShell: React.FC = () => {
             <ProductCatalog mode="homepage" />
             <SpotCharts selectedMetal={selectedMetalChart} onSelectMetal={setSelectedMetalChart} />
             <ShowroomAndNews />
+            <ContactSection />
           </>
         )}
 

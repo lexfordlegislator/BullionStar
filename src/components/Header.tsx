@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ChevronDown,
   Globe,
+  Mail,
   MapPin,
   Menu,
   Search,
@@ -33,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
   const {
     view,
     setView,
+    scrollToContact,
     setCatalogFilter,
     language,
     setLanguage,
@@ -145,7 +147,16 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <div className="hidden xl:flex items-center gap-3">
+            <a
+              href="mailto:info@bullionstar.in.net"
+              className="inline-flex items-center gap-1.5 text-slate-200 hover:text-[#F2D06B] transition-colors whitespace-nowrap shrink-0 font-medium"
+              title="Email BullionStar Support"
+            >
+              <Mail className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+              <span>info@bullionstar.in.net</span>
+            </a>
+            <span className="hidden xl:inline text-slate-600" aria-hidden="true">|</span>
+            <div className="hidden xl:flex items-center gap-2">
               {(['Gold', 'Silver', 'Platinum', 'Palladium'] as const).map((metal) => {
                 const change = spotChangesPct[metal];
                 const isUp = change >= 0;
@@ -358,11 +369,12 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
               { label: 'Storage & Vaults', active: view === 'vaults', action: () => navigateCategory('All', 'vaults') },
               { label: 'Spot Charts & Research', active: view === 'charts', action: () => navigateCategory('All', 'charts') },
               { label: 'Your Account', active: view === 'account', action: () => navigateCategory('All', 'account') },
+              { label: 'Contact', active: false, action: () => { setMobileMenuOpen(false); scrollToContact(); } },
             ].map((item) => (
               <button
                 key={item.label}
                 onClick={item.action}
-                className={`px-4 py-3 text-[13px] font-medium whitespace-nowrap shrink-0 border-b-2 transition-colors ${
+                className={`px-3 xl:px-3.5 py-3 text-[13px] font-medium whitespace-nowrap shrink-0 border-b-2 transition-colors ${
                   item.active
                     ? 'border-[#C59B27] text-[#F2D06B] bg-[#0D1F3C]'
                     : 'border-transparent text-slate-200 hover:text-white hover:bg-[#193561]'
@@ -372,7 +384,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
               </button>
             ))}
           </div>
-          <div className="text-xs text-slate-300 font-medium whitespace-nowrap shrink-0">
+          <div className="hidden 2xl:block text-xs text-slate-300 font-medium whitespace-nowrap shrink-0">
             0% GST on Investment Precious Metals in Singapore
           </div>
         </div>
@@ -397,6 +409,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
               { label: 'Storage & Singapore Vaults', action: () => navigateCategory('All', 'vaults') },
               { label: 'Live Spot Charts & Research', action: () => navigateCategory('All', 'charts') },
               { label: 'Your Account Portal', action: () => navigateCategory('All', 'account') },
+              { label: 'Contact Us', action: () => { setMobileMenuOpen(false); scrollToContact(); } },
             ].map((nav) => (
               <button
                 key={nav.label}
