@@ -85,7 +85,6 @@ export const AuthModal: React.FC = () => {
     resendLoginOtp,
     requestPasswordResetOtp,
     completePasswordResetWithOtp,
-    demoLogin,
   } = useBullion();
 
   const [mode, setMode] = useState<'signin' | 'signup'>(authModalMode);
@@ -572,18 +571,11 @@ export const AuthModal: React.FC = () => {
               </p>
             )}
 
-            <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-slate-200 flex items-center justify-center">
               <span className="text-[11px] text-slate-500 flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                 <span>Email OTP 2FA Enforced</span>
               </span>
-              <button
-                type="button"
-                onClick={demoLogin}
-                className="text-xs font-semibold text-[#0D1F3C] hover:text-[#B38818] underline underline-offset-2"
-              >
-                Quick Preview: Demo Client Login
-              </button>
             </div>
           </form>
         )}
