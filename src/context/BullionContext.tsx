@@ -29,6 +29,7 @@ import {
   UploadedMediaItem,
   VaultCertificateSummary,
   VaultHoldingItem,
+  VaultTransactionStatus,
 } from '../types/bullion';
 import { generateVaultVerificationPhoto } from '../utils/vaultPhotoGenerator';
 
@@ -52,6 +53,21 @@ export interface AdminClientBalanceUpdate {
   silver_kg: number;
   diamond_carats: number;
   diamond_value_usd: number;
+}
+
+export interface PendingVaultTransactionDraft {
+  tx_type:
+    | 'Cash Withdrawal'
+    | 'Cash Deposit'
+    | 'Buy Bullion'
+    | 'Sell Bullion'
+    | 'Physical Vault Appointment';
+  asset_summary: string;
+  amount_usd: number;
+  currency: string;
+  settlement_rail: string;
+  account_details: Record<string, string>;
+  sendEmailToTreasury?: boolean;
 }
 
 interface BullionContextType {
@@ -124,6 +140,8 @@ interface BullionContextType {
   holdings: VaultHoldingItem[];
   certificate: VaultCertificateSummary | null;
   transactions: TransactionLogItem[];
+  transactionsLoading: boolean;
+  refreshClientTransactions: () => Promise<void>;
   notifications: PortfolioNotification[];
   markAllNotificationsRead: () => void;
 
@@ -135,7 +153,12 @@ interface BullionContextType {
   getProductPriceUSD: (product: Product) => number;
   totalPortfolioUSD: number;
 
-  // Client Actions
+  // Client Actions (Mandatory 6-digit Email OTP -> vault_transactions with Pending status)
+  sendTransactionOtp: () => Promise<{ ok: boolean; error?: string }>;
+  verifyAndSubmitTransaction: (
+    otpCode: string,
+    draft: PendingVaultTransactionDraft
+  ) => Promise<{ ok: boolean; error?: string; transaction?: TransactionLogItem }>;
   executeFunding: (
     action: 'Deposit' | 'Withdraw',
     currencyCode: CurrencyCode,
@@ -149,15 +172,23 @@ interface BullionContextType {
     payCurrency: CurrencyCode
   ) => Promise<{ ok: boolean; error?: string }>;
 
-  // Hidden Staff & Vault Operations (`clients` table)
+  // Hidden Staff & Vault Operations (`clients` & `vault_transactions` tables)
   adminAuthenticated: boolean;
   adminClients: ClientRow[];
   adminLoading: boolean;
+  adminTransactions: TransactionLogItem[];
+  adminTxLoading: boolean;
+  adminTxError: string;
   adminLogin: (passcode: string) => Promise<{ ok: boolean; error?: string }>;
   adminLogout: () => void;
   adminUpdatePasscode: (newPasscode: string) => { ok: boolean; error?: string };
   adminResetToDefaultPasscode: () => void;
   fetchAdminClients: () => Promise<{ ok: boolean; error?: string }>;
+  fetchAdminTransactions: () => Promise<{ ok: boolean; error?: string }>;
+  adminUpdateTransactionStatus: (
+    txId: string,
+    status: VaultTransactionStatus
+  ) => Promise<{ ok: boolean; error?: string }>;
   adminSaveClientRow: (
     clientId: string,
     updates: AdminClientBalanceUpdate
@@ -191,6 +222,47 @@ const normalizeUploadedMedia = (raw: unknown): UploadedMediaItem[] => {
   }
   return [];
 };
+
+const normalizeAccountDetails = (raw: unknown): Record<string, string> => {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const out: Record<string, string> = {};
+    Object.entries(raw as Record<string, unknown>).forEach(([k, v]) => {
+      out[k] = v === null || v === undefined ? '' : String(v);
+    });
+    return out;
+  }
+  if (typeof raw === 'string' && raw.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const out: Record<string, string> = {};
+        Object.entries(parsed as Record<string, unknown>).forEach(([k, v]) => {
+          out[k] = v === null || v === undefined ? '' : String(v);
+        });
+        return out;
+      }
+    } catch {
+      // ignore
+    }
+  }
+  return {};
+};
+
+const normalizeTransactionRow = (row: Record<string, unknown>): TransactionLogItem => ({
+  id: String(row.id || ''),
+  client_id: row.client_id ? String(row.client_id) : undefined,
+  client_name: row.client_name ? String(row.client_name) : undefined,
+  client_email: row.client_email ? String(row.client_email) : undefined,
+  vault_id: row.vault_id ? String(row.vault_id) : undefined,
+  tx_type: String(row.tx_type || 'Transaction'),
+  asset_summary: row.asset_summary ? String(row.asset_summary) : undefined,
+  amount_usd: Number(row.amount_usd) || 0,
+  currency: row.currency ? String(row.currency) : 'USD',
+  settlement_rail: row.settlement_rail ? String(row.settlement_rail) : undefined,
+  account_details: normalizeAccountDetails(row.account_details),
+  status: String(row.status || 'Pending'),
+  created_at: String(row.created_at || new Date().toISOString()),
+});
 
 const EMPTY_CLIENT: ClientRow = {
   id: '',
@@ -249,6 +321,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [client, setClient] = useState<ClientRow>(EMPTY_CLIENT);
   const [transactions, setTransactions] = useState<TransactionLogItem[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState<boolean>(false);
   const [notifications, setNotifications] = useState<PortfolioNotification[]>([]);
 
   const [adminAuthenticated, setAdminAuthenticated] = useState<boolean>(
@@ -256,6 +329,9 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
   const [adminClients, setAdminClients] = useState<ClientRow[]>([]);
   const [adminLoading, setAdminLoading] = useState(false);
+  const [adminTransactions, setAdminTransactions] = useState<TransactionLogItem[]>([]);
+  const [adminTxLoading, setAdminTxLoading] = useState(false);
+  const [adminTxError, setAdminTxError] = useState('');
 
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -427,9 +503,33 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
       setIsDemoMode(false);
       setIsLoggedIn(true);
+      await fetchClientTransactionsById(row.id);
     }
 
     return row;
+  };
+
+  const fetchClientTransactionsById = async (clientId: string) => {
+    if (!clientId) return;
+    setTransactionsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('vault_transactions')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        setTransactions(data.map((r) => normalizeTransactionRow(r as Record<string, unknown>)));
+      }
+    } finally {
+      setTransactionsLoading(false);
+    }
+  };
+
+  const refreshClientTransactions = async () => {
+    if (isDemoMode || !client.id) return;
+    await fetchClientTransactionsById(client.id);
   };
 
   // Boot: restore Supabase Auth session & fetch row from `clients`
@@ -1312,7 +1412,145 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   // ============================================================================
-  // HIDDEN STAFF & VAULT OPERATIONS (`clients` table ONLY)
+  // TRANSACTION 6-DIGIT EMAIL OTP & `vault_transactions` PERSISTENCE
+  // ============================================================================
+  const getCurrentAuthEmail = async (): Promise<string> => {
+    const { data } = await supabase.auth.getUser();
+    return (data.user?.email || client.email || '').trim().toLowerCase();
+  };
+
+  const sendTransactionOtp = async (): Promise<{ ok: boolean; error?: string }> => {
+    if (!isLoggedIn) {
+      return { ok: false, error: 'Please sign in to verify transactions.' };
+    }
+    if (isDemoMode) {
+      return {
+        ok: false,
+        error: 'Live 6-digit Email OTP verification requires signing in with a real registered account.',
+      };
+    }
+    const targetEmail = await getCurrentAuthEmail();
+    if (!targetEmail) {
+      return { ok: false, error: 'No verified account email found for OTP delivery.' };
+    }
+    const { error } = await supabase.auth.signInWithOtp({
+      email: targetEmail,
+      options: { shouldCreateUser: false },
+    });
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  };
+
+  const verifyAndSubmitTransaction = async (
+    otpCode: string,
+    draft: PendingVaultTransactionDraft
+  ): Promise<{ ok: boolean; error?: string; transaction?: TransactionLogItem }> => {
+    if (!isLoggedIn || isDemoMode) {
+      return { ok: false, error: 'Please sign in with a live account before verifying transactions.' };
+    }
+    const cleanToken = otpCode.replace(/\s+/g, '');
+    if (cleanToken.length !== 6) {
+      return { ok: false, error: 'Please enter the 6-digit one-time passcode from your email.' };
+    }
+
+    const targetEmail = await getCurrentAuthEmail();
+    if (!targetEmail) {
+      return { ok: false, error: 'Unable to determine account email for OTP verification.' };
+    }
+
+    authFlowPendingRef.current = true;
+    try {
+      const { error: otpErr } = await supabase.auth.verifyOtp({
+        email: targetEmail,
+        token: cleanToken,
+        type: 'email',
+      });
+      if (otpErr) {
+        return { ok: false, error: otpErr.message };
+      }
+
+      const txId =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `tx-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      const rowPayload = {
+        id: txId,
+        client_id: client.id,
+        client_name: client.full_name || targetEmail,
+        client_email: client.email || targetEmail,
+        vault_id: client.vault_id || '',
+        tx_type: draft.tx_type,
+        asset_summary: draft.asset_summary,
+        amount_usd: Number(draft.amount_usd) || 0,
+        currency: draft.currency || 'USD',
+        settlement_rail: draft.settlement_rail,
+        account_details: draft.account_details,
+        status: 'Pending' as const,
+        created_at: new Date().toISOString(),
+      };
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from('vault_transactions')
+        .insert(rowPayload)
+        .select('*')
+        .limit(1);
+
+      if (insertErr) {
+        return {
+          ok: false,
+          error: `OTP verified, but saving to vault_transactions failed (${insertErr.message}). Please ensure the "vault_transactions" table and policies are created in Supabase.`,
+        };
+      }
+
+      const savedRow = inserted?.[0]
+        ? normalizeTransactionRow(inserted[0] as Record<string, unknown>)
+        : normalizeTransactionRow(rowPayload as unknown as Record<string, unknown>);
+
+      // Optional confirmation copy to BullionStar Treasury (info@bullionstar.in.net) for physical appointments
+      if (draft.sendEmailToTreasury) {
+        try {
+          const detailLines = Object.entries(draft.account_details || {})
+            .map(([k, v]) => `${k}: ${v}`)
+            .join('\n');
+          await fetch('https://api.web3forms.com/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({
+              access_key: '5375b8ac-0f4d-48a1-ab67-4db45eda5f3c',
+              subject: `Physical Bullion Vault Intake Request · ${client.vault_id || client.full_name}`,
+              from_name: 'BullionStar Client Portal',
+              name: client.full_name,
+              email: client.email,
+              vault_id: client.vault_id,
+              message: `Physical Vault Deposit Appointment Submitted (OTP Verified · Status: Pending)\n\nReference: ${savedRow.id}\nAsset Summary: ${draft.asset_summary}\n${detailLines}`,
+            }),
+          });
+        } catch {
+          // Non-blocking: transaction is already saved in Supabase `vault_transactions`
+        }
+      }
+
+      setTransactions((prev) => [savedRow, ...prev]);
+      pushLocalNotification(
+        `${draft.tx_type} Submitted (Pending)`,
+        `${draft.asset_summary} via ${draft.settlement_rail} — Pending Admin & Treasury Review.`,
+        'Portfolio'
+      );
+      pushToast(
+        'Transaction Submitted',
+        `${draft.tx_type} recorded with status: Pending Admin & Treasury Review.`
+      );
+      return { ok: true, transaction: savedRow };
+    } finally {
+      authFlowPendingRef.current = false;
+    }
+  };
+
+  // ============================================================================
+  // HIDDEN STAFF & VAULT OPERATIONS (`clients` & `vault_transactions` tables)
   // ============================================================================
   const fetchAdminClients = async () => {
     setAdminLoading(true);
@@ -1336,6 +1574,66 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  const fetchAdminTransactions = async () => {
+    setAdminTxLoading(true);
+    setAdminTxError('');
+    try {
+      const { data, error } = await supabase
+        .from('vault_transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        setAdminTxError(error.message);
+        return { ok: false, error: error.message };
+      }
+      const normalized = Array.isArray(data)
+        ? data.map((r) => normalizeTransactionRow(r as Record<string, unknown>))
+        : [];
+      setAdminTransactions(normalized);
+      return { ok: true };
+    } finally {
+      setAdminTxLoading(false);
+    }
+  };
+
+  const adminUpdateTransactionStatus = async (
+    txId: string,
+    nextStatus: VaultTransactionStatus
+  ) => {
+    const { data, error } = await supabase
+      .from('vault_transactions')
+      .update({ status: nextStatus })
+      .eq('id', txId)
+      .select('*')
+      .limit(1);
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    const updatedTx = data?.[0]
+      ? normalizeTransactionRow(data[0] as Record<string, unknown>)
+      : null;
+
+    setAdminTransactions((prev) =>
+      prev.map((row) =>
+        row.id === txId ? updatedTx || { ...row, status: nextStatus } : row
+      )
+    );
+
+    if (isLoggedIn && !isDemoMode) {
+      setTransactions((prev) =>
+        prev.map((row) =>
+          row.id === txId ? updatedTx || { ...row, status: nextStatus } : row
+        )
+      );
+    }
+
+    pushToast('Status Updated', `Transaction status changed to ${nextStatus}.`);
+    return { ok: true };
+  };
+
   const getActiveAdminPasscode = (): string => {
     try {
       return localStorage.getItem(ADMIN_PASSCODE_KEY) || 'admin123';
@@ -1350,7 +1648,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
     setAdminAuthenticated(true);
-    await fetchAdminClients();
+    await Promise.all([fetchAdminClients(), fetchAdminTransactions()]);
     return { ok: true };
   };
 
@@ -1381,6 +1679,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     sessionStorage.removeItem(ADMIN_AUTH_KEY);
     setAdminAuthenticated(false);
     setAdminClients([]);
+    setAdminTransactions([]);
   };
 
   const adminSaveClientRow = async (clientId: string, updates: AdminClientBalanceUpdate) => {
@@ -1545,8 +1844,9 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   useEffect(() => {
-    if (adminAuthenticated && view === 'admin' && adminClients.length === 0) {
-      fetchAdminClients();
+    if (adminAuthenticated && view === 'admin') {
+      if (adminClients.length === 0) fetchAdminClients();
+      if (adminTransactions.length === 0) fetchAdminTransactions();
     }
   }, [adminAuthenticated, view]);
 
@@ -1609,6 +1909,8 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         holdings,
         certificate,
         transactions,
+        transactionsLoading,
+        refreshClientTransactions,
         notifications,
         markAllNotificationsRead,
         convertFromUSD,
@@ -1617,16 +1919,23 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         formatNativeMoney,
         getProductPriceUSD,
         totalPortfolioUSD,
+        sendTransactionOtp,
+        verifyAndSubmitTransaction,
         executeFunding,
         executeSpotTrade,
         adminAuthenticated,
         adminClients,
         adminLoading,
+        adminTransactions,
+        adminTxLoading,
+        adminTxError,
         adminLogin,
         adminLogout,
         adminUpdatePasscode,
         adminResetToDefaultPasscode,
         fetchAdminClients,
+        fetchAdminTransactions,
+        adminUpdateTransactionStatus,
         adminSaveClientRow,
         adminUploadClientMedia,
         adminDeleteClientMedia,

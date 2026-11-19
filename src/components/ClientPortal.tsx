@@ -3,8 +3,11 @@ import {
   AlertCircle,
   ArrowDownUp,
   Bell,
+  Building2,
+  Calendar,
   Camera,
   CheckCircle2,
+  Clock,
   Download,
   ExternalLink,
   FileCheck2,
@@ -20,12 +23,27 @@ import {
   Search,
   ShieldCheck,
   UserPlus,
+  Vault,
   Wallet,
   X,
+  XCircle,
   ZoomIn,
 } from 'lucide-react';
 import { AUDIT_REPORTS } from '../data/initialData';
-import { useBullion } from '../context/BullionContext';
+import {
+  BUY_PAYMENT_METHODS,
+  BuyPaymentMethod,
+  DEPOSIT_ORIGINATING_FIELDS,
+  getDefaultFieldValues,
+  getTreasuryInstructions,
+  PHYSICAL_DEPOSIT_ASSET_TYPES,
+  SETTLEMENT_RAILS,
+  SettlementRailId,
+  validateRailFields,
+  VAULT_FACILITY_REGIONS,
+  WITHDRAWAL_RAIL_FIELDS,
+} from '../data/settlementRails';
+import { PendingVaultTransactionDraft, useBullion } from '../context/BullionContext';
 import {
   CurrencyCode,
   UploadedMediaItem,
@@ -33,6 +51,7 @@ import {
   VaultHoldingItem,
 } from '../types/bullion';
 import { ResilientImage } from './ResilientImage';
+import { TransactionOtpModal } from './TransactionOtpModal';
 
 type AccountTab =
   | 'overview'
@@ -62,16 +81,18 @@ export const ClientPortal: React.FC = () => {
     holdings,
     certificate,
     transactions,
+    transactionsLoading,
+    refreshClientTransactions,
     notifications,
     markAllNotificationsRead,
     currency,
+    convertToUSD,
     formatMoney,
     spotPriceMap,
     totalPortfolioUSD,
     products,
     getProductPriceUSD,
-    executeFunding,
-    executeSpotTrade,
+    sendTransactionOtp,
     setView,
   } = useBullion();
 
@@ -80,22 +101,47 @@ export const ClientPortal: React.FC = () => {
   const [photoZoomed, setPhotoZoomed] = useState(false);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string>('');
 
-  // Funding Modal
+  // OTP Modal Draft for Withdraw, Deposit, Buy/Sell, and Physical Vault Appointment
+  const [txOtpDraft, setTxOtpDraft] = useState<PendingVaultTransactionDraft | null>(null);
+
+  // Funding Modal (Deposit / Withdraw Cash)
   const [fundingModal, setFundingModal] = useState(false);
   const [fundingAction, setFundingAction] = useState<'Deposit' | 'Withdraw'>('Deposit');
   const [fundingCurrency, setFundingCurrency] = useState<CurrencyCode>('USD');
   const [fundingAmount, setFundingAmount] = useState('10000');
-  const [fundingMethod, setFundingMethod] = useState('FAST Bank Transfer (Singapore)');
+  const [fundingRail, setFundingRail] = useState<SettlementRailId>('SWIFT / International Wire');
+  const [fundingFields, setFundingFields] = useState<Record<string, string>>(() =>
+    getDefaultFieldValues(DEPOSIT_ORIGINATING_FIELDS['SWIFT / International Wire'])
+  );
   const [fundingError, setFundingError] = useState('');
   const [fundingBusy, setFundingBusy] = useState(false);
 
-  // Spot Trade Modal
+  // Buy / Sell Bullion & Diamonds Modal
   const [tradeModal, setTradeModal] = useState(false);
   const [tradeSide, setTradeSide] = useState<'Buy' | 'Sell'>('Buy');
   const [tradeProductId, setTradeProductId] = useState(products[0].id);
   const [tradeQty, setTradeQty] = useState(1);
+  const [tradePaymentMethod, setTradePaymentMethod] = useState<BuyPaymentMethod>(
+    'SWIFT / International Wire'
+  );
+  const [tradeFields, setTradeFields] = useState<Record<string, string>>(() =>
+    getDefaultFieldValues(DEPOSIT_ORIGINATING_FIELDS['SWIFT / International Wire'])
+  );
   const [tradeError, setTradeError] = useState('');
   const [tradeBusy, setTradeBusy] = useState(false);
+
+  // Physical Gold / Bullion Vault Deposit Modal (Regional Appointment)
+  const [physicalModal, setPhysicalModal] = useState(false);
+  const [physRegion, setPhysRegion] = useState<string>(VAULT_FACILITY_REGIONS[0]);
+  const [physAssetType, setPhysAssetType] = useState<string>(PHYSICAL_DEPOSIT_ASSET_TYPES[0]);
+  const [physEstimatedWeight, setPhysEstimatedWeight] = useState('');
+  const [physPreferredDate, setPhysPreferredDate] = useState('');
+  const [physPhone, setPhysPhone] = useState('');
+  const [physEmail, setPhysEmail] = useState('');
+  const [physNotes, setPhysNotes] = useState('');
+  const [physSendEmailCopy, setPhysSendEmailCopy] = useState(true);
+  const [physError, setPhysError] = useState('');
+  const [physBusy, setPhysBusy] = useState(false);
 
   const [txFilter, setTxFilter] = useState('All');
   const [txSearch, setTxSearch] = useState('');
@@ -362,6 +408,9 @@ export const ClientPortal: React.FC = () => {
             </button>
             <button
               onClick={() => {
+                setFundingAction('Deposit');
+                setFundingRail('SWIFT / International Wire');
+                setFundingFields(getDefaultFieldValues(DEPOSIT_ORIGINATING_FIELDS['SWIFT / International Wire']));
                 setFundingError('');
                 setFundingModal(true);
               }}
@@ -372,6 +421,24 @@ export const ClientPortal: React.FC = () => {
             </button>
             <button
               onClick={() => {
+                setPhysPhone(client.phone || '');
+                setPhysEmail(client.email || '');
+                setPhysEstimatedWeight('');
+                setPhysPreferredDate('');
+                setPhysNotes('');
+                setPhysError('');
+                setPhysicalModal(true);
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
+            >
+              <Vault className="w-4 h-4 text-[#F2D06B]" />
+              <span>Deposit Physical Gold / Bullion</span>
+            </button>
+            <button
+              onClick={() => {
+                setTradeSide('Buy');
+                setTradePaymentMethod('SWIFT / International Wire');
+                setTradeFields(getDefaultFieldValues(DEPOSIT_ORIGINATING_FIELDS['SWIFT / International Wire']));
                 setTradeError('');
                 setTradeModal(true);
               }}
@@ -448,7 +515,12 @@ export const ClientPortal: React.FC = () => {
             ].map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id === 'history') {
+                    refreshClientTransactions();
+                  }
+                }}
                 className={`px-3.5 py-2.5 text-left text-xs sm:text-sm font-semibold rounded-sm transition-colors whitespace-nowrap lg:whitespace-normal shrink-0 flex items-center justify-between gap-2 ${
                   activeTab === tab.id
                     ? 'bg-[#0D1F3C] text-[#F2D06B] border-l-4 border-[#C59B27]'
@@ -588,10 +660,27 @@ export const ClientPortal: React.FC = () => {
                   </p>
                   <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
                     <button
-                      onClick={() => setFundingModal(true)}
+                      onClick={() => {
+                        setFundingAction('Deposit');
+                        setFundingRail('SWIFT / International Wire');
+                        setFundingFields(getDefaultFieldValues(DEPOSIT_ORIGINATING_FIELDS['SWIFT / International Wire']));
+                        setFundingError('');
+                        setFundingModal(true);
+                      }}
                       className="px-3.5 py-2 bg-[#0D1F3C] text-white text-xs font-semibold rounded"
                     >
                       Deposit Cash
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPhysPhone(client.phone || '');
+                        setPhysEmail(client.email || '');
+                        setPhysError('');
+                        setPhysicalModal(true);
+                      }}
+                      className="px-3.5 py-2 border border-slate-300 bg-white text-[#0D1F3C] text-xs font-semibold rounded hover:bg-slate-50"
+                    >
+                      Deposit Physical Bullion
                     </button>
                     <button
                       onClick={() => setView('catalog')}
@@ -1206,15 +1295,25 @@ export const ClientPortal: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 6: Transaction History */}
+      {/* TAB 6: Transaction History (Synced live from Supabase vault_transactions) */}
       {activeTab === 'history' && (
         <div className="bg-white border border-slate-200 rounded overflow-hidden">
           <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-[#0D1F3C]">Session Activity & Ledger</h2>
-              <p className="text-xs text-slate-500">Deposits, withdrawals, and spot executions</p>
+              <h2 className="text-base font-bold text-[#0D1F3C]">Transactions &amp; Treasury Ledger</h2>
+              <p className="text-xs text-slate-500">
+                OTP-verified deposits, withdrawals, bullion orders, and physical intake appointments
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={refreshClientTransactions}
+                disabled={transactionsLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 hover:bg-slate-50 rounded text-xs font-semibold text-[#0D1F3C]"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 text-[#B38818] ${transactionsLoading ? 'animate-spin' : ''}`} />
+                <span>{transactionsLoading ? 'Syncing...' : 'Refresh'}</span>
+              </button>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -1222,52 +1321,105 @@ export const ClientPortal: React.FC = () => {
                   value={txSearch}
                   onChange={(e) => setTxSearch(e.target.value)}
                   placeholder="Search transactions..."
-                  className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded w-48"
+                  className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded w-44 sm:w-48"
                 />
               </div>
               <select
                 value={txFilter}
                 onChange={(e) => setTxFilter(e.target.value)}
-                className="px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white"
+                className="px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-semibold"
               >
                 <option value="All">All Statuses</option>
-                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
                 <option value="Completed">Completed</option>
-                <option value="Settled">Settled</option>
+                <option value="Declined">Declined</option>
               </select>
             </div>
           </div>
 
           {filteredTx.length === 0 ? (
             <div className="p-10 text-center text-sm text-slate-500">
-              No transactions recorded yet in this session.
+              {transactionsLoading
+                ? 'Loading transactions from vault ledger...'
+                : 'No matching transactions recorded yet.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-[#F8FAFC] text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th className="py-2.5 px-4 text-left font-semibold">Date & Time</th>
-                    <th className="py-2.5 px-4 text-left font-semibold">Transaction Type</th>
+                    <th className="py-2.5 px-4 text-left font-semibold">Date &amp; Time</th>
+                    <th className="py-2.5 px-4 text-left font-semibold">Type &amp; Details</th>
+                    <th className="py-2.5 px-4 text-left font-semibold">Settlement Rail &amp; Account Info</th>
                     <th className="py-2.5 px-4 text-left font-semibold">Status</th>
                     <th className="py-2.5 px-4 text-right font-semibold">Amount ({currency})</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredTx.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-[#F8FAFC]">
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                        {tx.created_at ? new Date(tx.created_at).toLocaleString() : '-'}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-[#0D1F3C]">{tx.tx_type}</td>
-                      <td className="py-3 px-4">
-                        <span className="text-xs font-semibold text-emerald-700">{tx.status}</span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-[#0D1F3C] tabular-nums whitespace-nowrap">
-                        {formatMoney(tx.amount_usd)}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredTx.map((tx) => {
+                    const st = (tx.status || 'Pending').trim();
+                    const isPending = st === 'Pending';
+                    const isDeclined = st === 'Declined';
+                    const detailEntries = tx.account_details
+                      ? Object.entries(tx.account_details).filter(([, val]) => String(val).trim() !== '')
+                      : [];
+                    return (
+                      <tr key={tx.id} className="hover:bg-[#F8FAFC] align-top">
+                        <td className="py-3 px-4 font-mono text-[11px] text-slate-500 whitespace-nowrap">
+                          {tx.created_at ? new Date(tx.created_at).toLocaleString() : '-'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-[#0D1F3C]">{tx.tx_type}</div>
+                          {tx.asset_summary && (
+                            <div className="text-[11px] text-slate-600 mt-0.5">{tx.asset_summary}</div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-800">
+                            {tx.settlement_rail || 'Treasury Settlement'}
+                          </div>
+                          {detailEntries.length > 0 && (
+                            <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+                              {detailEntries.slice(0, 4).map(([k, v]) => (
+                                <div key={k}>
+                                  <span className="font-medium text-slate-600">{k}:</span>{' '}
+                                  <span className="font-mono">{v}</span>
+                                </div>
+                              ))}
+                              {detailEntries.length > 4 && (
+                                <div className="text-[10px] text-slate-400">
+                                  +{detailEntries.length - 4} more submitted detail(s)
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-sm border text-[11px] font-bold ${
+                              isPending
+                                ? 'bg-amber-50 border-amber-300 text-amber-800'
+                                : isDeclined
+                                ? 'bg-rose-50 border-rose-300 text-rose-700'
+                                : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                            }`}
+                          >
+                            {isPending ? (
+                              <Clock className="w-3 h-3" />
+                            ) : isDeclined ? (
+                              <XCircle className="w-3 h-3" />
+                            ) : (
+                              <CheckCircle2 className="w-3 h-3" />
+                            )}
+                            <span>{st}</span>
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-bold text-[#0D1F3C] tabular-nums whitespace-nowrap">
+                          {tx.amount_usd > 0 ? formatMoney(tx.amount_usd) : 'Vault Intake'}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1668,119 +1820,606 @@ export const ClientPortal: React.FC = () => {
         </div>
       )}
 
-      {/* Funding Modal */}
-      {fundingModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-xl">
-            <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between">
-              <h3 className="font-bold text-base">Deposit / Withdraw Cash</h3>
-              <button onClick={() => setFundingModal(false)} aria-label="Close funding modal">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* Funding Modal: Deposit & Cash Withdrawal with Rail-Specific Account Details & OTP Gate */}
+      {fundingModal && (() => {
+        const activeFieldDefs =
+          fundingAction === 'Withdraw'
+            ? WITHDRAWAL_RAIL_FIELDS[fundingRail]
+            : DEPOSIT_ORIGINATING_FIELDS[fundingRail];
+        const treasuryInfo =
+          fundingAction === 'Deposit' ? getTreasuryInstructions(fundingRail, client.vault_id) : null;
+        const parsedAmt = Number(fundingAmount) || 0;
+        const amtUSD = parsedAmt > 0 ? Number(convertToUSD(parsedAmt, fundingCurrency).toFixed(2)) : 0;
+        const fieldsValidation = validateRailFields(activeFieldDefs, fundingFields);
+        const canContinueFunding =
+          parsedAmt > 0 &&
+          fieldsValidation.valid &&
+          (fundingAction !== 'Withdraw' || amtUSD <= cashUSD);
 
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                setFundingError('');
-                const amt = Number(fundingAmount);
-                if (!amt || amt <= 0) {
-                  setFundingError('Enter a valid positive amount.');
-                  return;
-                }
-                setFundingBusy(true);
-                const res = await executeFunding(fundingAction, fundingCurrency, amt, fundingMethod);
-                setFundingBusy(false);
-                if (!res.ok) {
-                  setFundingError(res.error || 'Funding request failed.');
-                  return;
-                }
-                setFundingModal(false);
-              }}
-              className="p-5 space-y-4"
-            >
-              <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded">
-                {(['Deposit', 'Withdraw'] as const).map((act) => (
-                  <button
-                    key={act}
-                    type="button"
-                    onClick={() => setFundingAction(act)}
-                    className={`py-2 text-xs font-bold rounded-sm ${
-                      fundingAction === act ? 'bg-[#0D1F3C] text-white' : 'text-slate-600'
-                    }`}
-                  >
-                    {act} Funds
-                  </button>
-                ))}
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
+            <div className="bg-white border border-slate-200 rounded-md max-w-xl w-full overflow-hidden shadow-xl max-h-[92vh] flex flex-col">
+              <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="font-bold text-base">
+                    {fundingAction === 'Deposit' ? 'Deposit Cash Funds' : 'Withdraw Cash Balance'}
+                  </h3>
+                  <p className="text-[11px] text-[#F2D06B]">
+                    {fundingAction === 'Deposit'
+                      ? 'Originating account verification + Treasury instructions + 6-Digit Email OTP'
+                      : 'Destination bank/wallet verification + 6-Digit Email OTP'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setFundingModal(false)}
+                  aria-label="Close funding modal"
+                  className="p-1 hover:bg-white/10 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setFundingError('');
+                  if (parsedAmt <= 0) {
+                    setFundingError('Enter a valid positive amount.');
+                    return;
+                  }
+                  if (fundingAction === 'Withdraw' && amtUSD > cashUSD) {
+                    setFundingError(
+                      `Withdrawal (${formatMoney(amtUSD)}) exceeds available cash balance (${formatMoney(cashUSD)}).`
+                    );
+                    return;
+                  }
+                  if (!fieldsValidation.valid) {
+                    setFundingError(fieldsValidation.error || 'Please fill in all required account fields.');
+                    return;
+                  }
+
+                  setFundingBusy(true);
+                  const otpRes = await sendTransactionOtp();
+                  setFundingBusy(false);
+
+                  if (!otpRes.ok) {
+                    setFundingError(otpRes.error || 'Failed to send 6-digit security code.');
+                    return;
+                  }
+
+                  setFundingModal(false);
+                  setTxOtpDraft({
+                    tx_type: fundingAction === 'Withdraw' ? 'Cash Withdrawal' : 'Cash Deposit',
+                    asset_summary: `${fundingCurrency} ${parsedAmt.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}`,
+                    amount_usd: amtUSD,
+                    currency: fundingCurrency,
+                    settlement_rail: fundingRail,
+                    account_details: {
+                      ...fundingFields,
+                      'Declared Amount': `${fundingCurrency} ${parsedAmt.toFixed(2)} (≈ US$${amtUSD.toFixed(2)})`,
+                    },
+                  });
+                }}
+                className="p-5 space-y-4 overflow-y-auto"
+              >
+                <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded">
+                  {(['Deposit', 'Withdraw'] as const).map((act) => (
+                    <button
+                      key={act}
+                      type="button"
+                      onClick={() => {
+                        setFundingAction(act);
+                        setFundingError('');
+                        setFundingFields(
+                          getDefaultFieldValues(
+                            act === 'Withdraw'
+                              ? WITHDRAWAL_RAIL_FIELDS[fundingRail]
+                              : DEPOSIT_ORIGINATING_FIELDS[fundingRail]
+                          )
+                        );
+                      }}
+                      className={`py-2 text-xs font-bold rounded-sm transition-colors ${
+                        fundingAction === act ? 'bg-[#0D1F3C] text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      {act} Funds
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
+                    <select
+                      value={fundingCurrency}
+                      onChange={(e) => setFundingCurrency(e.target.value as CurrencyCode)}
+                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white"
+                    >
+                      {(['USD', 'SGD', 'EUR'] as CurrencyCode[]).map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Amount</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.01"
+                      required
+                      value={fundingAmount}
+                      onChange={(e) => setFundingAmount(e.target.value)}
+                      className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded"
+                    />
+                  </div>
+                </div>
+
+                {fundingAction === 'Withdraw' && (
+                  <div className="bg-[#F8FAFC] border border-slate-200 rounded px-3.5 py-2.5 flex items-center justify-between text-xs">
+                    <span className="text-slate-600">Available Withdrawable Cash</span>
+                    <span className="font-mono font-bold text-[#0D1F3C] tabular-nums">
+                      {formatMoney(cashUSD)}
+                    </span>
+                  </div>
+                )}
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Settlement Rail
+                  </label>
                   <select
-                    value={fundingCurrency}
-                    onChange={(e) => setFundingCurrency(e.target.value as CurrencyCode)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white"
+                    value={fundingRail}
+                    onChange={(e) => {
+                      const nextRail = e.target.value as SettlementRailId;
+                      setFundingRail(nextRail);
+                      setFundingError('');
+                      setFundingFields(
+                        getDefaultFieldValues(
+                          fundingAction === 'Withdraw'
+                            ? WITHDRAWAL_RAIL_FIELDS[nextRail]
+                            : DEPOSIT_ORIGINATING_FIELDS[nextRail]
+                        )
+                      );
+                    }}
+                    className="w-full px-3 py-2 text-sm font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
                   >
-                    {(['USD', 'SGD', 'EUR'] as CurrencyCode[]).map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                    {SETTLEMENT_RAILS.map((rail) => (
+                      <option key={rail} value={rail}>
+                        {rail}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Amount</label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    value={fundingAmount}
-                    onChange={(e) => setFundingAmount(e.target.value)}
-                    className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Settlement Rail</label>
-                <select
-                  value={fundingMethod}
-                  onChange={(e) => setFundingMethod(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white"
+                {/* Receiving Treasury Instructions for Deposit */}
+                {treasuryInfo && (
+                  <div className="bg-[#0A162B] text-white rounded p-4 space-y-2 text-xs">
+                    <div className="flex items-center gap-1.5 text-[#F2D06B] font-bold">
+                      <Building2 className="w-4 h-4" />
+                      <span>{treasuryInfo.headline}</span>
+                    </div>
+                    <div className="space-y-1 border-t border-white/10 pt-2 text-[11px]">
+                      {treasuryInfo.rows.map((r) => (
+                        <div key={r.label} className="flex justify-between gap-3">
+                          <span className="text-slate-300 shrink-0">{r.label}:</span>
+                          <span className="font-mono text-right break-all">{r.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-slate-300 pt-1">{treasuryInfo.note}</p>
+                  </div>
+                )}
+
+                {/* Dynamic Rail-Specific Account Fields */}
+                <div className="border-t border-slate-200 pt-3 space-y-3">
+                  <p className="text-xs font-bold text-[#0D1F3C]">
+                    {fundingAction === 'Withdraw'
+                      ? `Destination Account Details (${fundingRail})`
+                      : `Originating Sender Account Details (${fundingRail})`}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {activeFieldDefs.map((field) => (
+                      <div
+                        key={field.key}
+                        className={activeFieldDefs.length % 2 === 1 && field.key === activeFieldDefs[activeFieldDefs.length - 1].key ? 'sm:col-span-2' : ''}
+                      >
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          {field.label} *
+                        </label>
+                        {field.type === 'select' && field.options ? (
+                          <select
+                            required={field.required}
+                            value={fundingFields[field.key] || ''}
+                            onChange={(e) =>
+                              setFundingFields((prev) => ({ ...prev, [field.key]: e.target.value }))
+                            }
+                            className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
+                          >
+                            {field.options.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type="text"
+                            required={field.required}
+                            value={fundingFields[field.key] || ''}
+                            onChange={(e) =>
+                              setFundingFields((prev) => ({ ...prev, [field.key]: e.target.value }))
+                            }
+                            placeholder={field.placeholder}
+                            className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {fundingAction === 'Withdraw' && amtUSD > cashUSD && (
+                  <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>
+                      Requested withdrawal ({formatMoney(amtUSD)}) exceeds available cash ({formatMoney(cashUSD)}).
+                    </span>
+                  </div>
+                )}
+
+                {fundingError && (
+                  <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{fundingError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={fundingBusy || !canContinueFunding}
+                  className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
                 >
-                  <option>FAST Bank Transfer (Singapore)</option>
-                  <option>PayNow Corporate (SGD Instant)</option>
-                  <option>SWIFT International Wire</option>
-                </select>
+                  {fundingBusy
+                    ? 'Sending 6-Digit Email OTP...'
+                    : 'Continue to Security Verification'}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Buy / Sell Bullion & GIA Diamonds Modal (Payment Rail + Account Details + OTP Gate) */}
+      {tradeModal && (() => {
+        const prod = products.find((p) => p.id === tradeProductId) || products[0];
+        const estUSD = Number(
+          (getProductPriceUSD(prod) * tradeQty * (tradeSide === 'Sell' ? 0.992 : 1)).toFixed(2)
+        );
+        const externalRail: SettlementRailId | null =
+          tradePaymentMethod === 'Available Cash Balance' ? null : tradePaymentMethod;
+        const activeTradeFields = externalRail
+          ? tradeSide === 'Buy'
+            ? DEPOSIT_ORIGINATING_FIELDS[externalRail]
+            : WITHDRAWAL_RAIL_FIELDS[externalRail]
+          : [];
+        const tradeTreasuryInfo =
+          tradeSide === 'Buy' && externalRail
+            ? getTreasuryInstructions(externalRail, client.vault_id)
+            : null;
+        const fieldsValidation = externalRail
+          ? validateRailFields(activeTradeFields, tradeFields)
+          : { valid: true };
+        const hasCashForBuy =
+          tradeSide !== 'Buy' ||
+          tradePaymentMethod !== 'Available Cash Balance' ||
+          cashUSD >= estUSD;
+        const canContinueTrade = tradeQty > 0 && fieldsValidation.valid && hasCashForBuy;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
+            <div className="bg-white border border-slate-200 rounded-md max-w-xl w-full overflow-hidden shadow-xl max-h-[92vh] flex flex-col">
+              <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="font-bold text-base">
+                    {tradeSide === 'Buy'
+                      ? 'Buy Gold, Silver or GIA Diamonds'
+                      : 'Sell Vault Bullion / Diamonds'}
+                  </h3>
+                  <p className="text-[11px] text-[#F2D06B]">
+                    Payment rail verification + Mandatory 6-Digit Email OTP
+                  </p>
+                </div>
+                <button
+                  onClick={() => setTradeModal(false)}
+                  aria-label="Close trade modal"
+                  className="p-1 hover:bg-white/10 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              {fundingError && (
-                <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{fundingError}</span>
-                </div>
-              )}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setTradeError('');
+                  if (tradeSide === 'Buy' && tradePaymentMethod === 'Available Cash Balance' && cashUSD < estUSD) {
+                    setTradeError(
+                      `Insufficient Available Cash Balance (${formatMoney(cashUSD)} available vs ${formatMoney(estUSD)} order total).`
+                    );
+                    return;
+                  }
+                  if (!fieldsValidation.valid) {
+                    setTradeError(fieldsValidation.error || 'Please complete all account details.');
+                    return;
+                  }
 
-              <button
-                type="submit"
-                disabled={fundingBusy}
-                className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors"
+                  setTradeBusy(true);
+                  const otpRes = await sendTransactionOtp();
+                  setTradeBusy(false);
+
+                  if (!otpRes.ok) {
+                    setTradeError(otpRes.error || 'Failed to dispatch 6-digit verification code.');
+                    return;
+                  }
+
+                  const accountDetails: Record<string, string> =
+                    tradePaymentMethod === 'Available Cash Balance'
+                      ? {
+                          'Settlement Source': `Vault Cash Balance (${client.vault_id})`,
+                          Product: `${tradeQty}x ${prod.name}`,
+                          SKU: prod.sku,
+                        }
+                      : {
+                          ...tradeFields,
+                          Product: `${tradeQty}x ${prod.name}`,
+                          SKU: prod.sku,
+                        };
+
+                  setTradeModal(false);
+                  setTxOtpDraft({
+                    tx_type: tradeSide === 'Buy' ? 'Buy Bullion' : 'Sell Bullion',
+                    asset_summary: `${tradeQty}x ${prod.name}`,
+                    amount_usd: estUSD,
+                    currency,
+                    settlement_rail: tradePaymentMethod,
+                    account_details: accountDetails,
+                  });
+                }}
+                className="p-5 space-y-4 overflow-y-auto"
               >
-                {fundingBusy ? 'Updating...' : `Confirm ${fundingAction}`}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+                <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded">
+                  {(['Buy', 'Sell'] as const).map((side) => (
+                    <button
+                      key={side}
+                      type="button"
+                      onClick={() => {
+                        setTradeSide(side);
+                        setTradeError('');
+                        if (externalRail) {
+                          setTradeFields(
+                            getDefaultFieldValues(
+                              side === 'Buy'
+                                ? DEPOSIT_ORIGINATING_FIELDS[externalRail]
+                                : WITHDRAWAL_RAIL_FIELDS[externalRail]
+                            )
+                          );
+                        }
+                      }}
+                      className={`py-2 text-xs font-bold rounded-sm transition-colors ${
+                        tradeSide === side ? 'bg-[#0D1F3C] text-white' : 'text-slate-600'
+                      }`}
+                    >
+                      {side} Gold / Silver / Diamonds
+                    </button>
+                  ))}
+                </div>
 
-      {/* Spot Trade Modal */}
-      {tradeModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-xl">
-            <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between">
-              <h3 className="font-bold text-base">Instant Bullion Spot Execution</h3>
-              <button onClick={() => setTradeModal(false)} aria-label="Close trade modal">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Select Bullion / Diamond Product
+                    </label>
+                    <select
+                      value={tradeProductId}
+                      onChange={(e) => setTradeProductId(e.target.value)}
+                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
+                    >
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({formatMoney(getProductPriceUSD(p))})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={tradeQty}
+                      onChange={(e) => setTradeQty(Math.max(1, Number(e.target.value)))}
+                      className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded"
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-[#F8FAFC] border border-slate-200 rounded p-3 text-xs flex justify-between items-center">
+                  <span className="text-slate-600">
+                    {tradeSide === 'Buy' ? 'Order Total' : 'Estimated Liquidation Value'} (Cash Avail:{' '}
+                    {formatMoney(cashUSD)})
+                  </span>
+                  <span className="font-mono text-sm font-bold text-[#0D1F3C] tabular-nums">
+                    {formatMoney(estUSD)}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {tradeSide === 'Buy'
+                      ? 'Payment / Settlement Method'
+                      : 'Payout Settlement Method'}
+                  </label>
+                  <select
+                    value={tradePaymentMethod}
+                    onChange={(e) => {
+                      const nextMethod = e.target.value as BuyPaymentMethod;
+                      setTradePaymentMethod(nextMethod);
+                      setTradeError('');
+                      if (nextMethod !== 'Available Cash Balance') {
+                        setTradeFields(
+                          getDefaultFieldValues(
+                            tradeSide === 'Buy'
+                              ? DEPOSIT_ORIGINATING_FIELDS[nextMethod]
+                              : WITHDRAWAL_RAIL_FIELDS[nextMethod]
+                          )
+                        );
+                      } else {
+                        setTradeFields({});
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
+                  >
+                    {BUY_PAYMENT_METHODS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {tradePaymentMethod === 'Available Cash Balance' ? (
+                  <div className="border border-slate-200 rounded p-3 bg-[#FAFBFD] text-xs space-y-1">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Available Vault Cash</span>
+                      <span className="font-mono font-bold text-[#0D1F3C]">{formatMoney(cashUSD)}</span>
+                    </div>
+                    {!hasCashForBuy && (
+                      <p className="text-rose-700 font-medium">
+                        Insufficient available cash balance for this purchase. Choose an external wire/bank/crypto rail or deposit funds first.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {tradeTreasuryInfo && (
+                      <div className="bg-[#0A162B] text-white rounded p-3.5 space-y-2 text-[11px]">
+                        <div className="flex items-center gap-1.5 text-[#F2D06B] font-bold">
+                          <Building2 className="w-4 h-4" />
+                          <span>{tradeTreasuryInfo.headline}</span>
+                        </div>
+                        <div className="space-y-1 border-t border-white/10 pt-2">
+                          {tradeTreasuryInfo.rows.map((r) => (
+                            <div key={r.label} className="flex justify-between gap-2">
+                              <span className="text-slate-300 shrink-0">{r.label}:</span>
+                              <span className="font-mono text-right break-all">{r.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-3 pt-1">
+                      <p className="text-xs font-bold text-[#0D1F3C]">
+                        {tradeSide === 'Buy'
+                          ? `Originating Payment Account / Wallet Details (${tradePaymentMethod})`
+                          : `Destination Payout Account Details (${tradePaymentMethod})`}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {activeTradeFields.map((field) => (
+                          <div
+                            key={field.key}
+                            className={activeTradeFields.length % 2 === 1 && field.key === activeTradeFields[activeTradeFields.length - 1].key ? 'sm:col-span-2' : ''}
+                          >
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                              {field.label} *
+                            </label>
+                            {field.type === 'select' && field.options ? (
+                              <select
+                                required={field.required}
+                                value={tradeFields[field.key] || ''}
+                                onChange={(e) =>
+                                  setTradeFields((prev) => ({
+                                    ...prev,
+                                    [field.key]: e.target.value,
+                                  }))
+                                }
+                                className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
+                              >
+                                {field.options.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <input
+                                type="text"
+                                required={field.required}
+                                value={tradeFields[field.key] || ''}
+                                onChange={(e) =>
+                                  setTradeFields((prev) => ({
+                                    ...prev,
+                                    [field.key]: e.target.value,
+                                  }))
+                                }
+                                placeholder={field.placeholder}
+                                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {tradeError && (
+                  <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{tradeError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={tradeBusy || !canContinueTrade}
+                  className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
+                >
+                  {tradeBusy
+                    ? 'Sending 6-Digit Email OTP...'
+                    : 'Continue to Security Verification'}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Physical Gold / Bullion Vault Deposit Modal (Regional Intake Appointment) */}
+      {physicalModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
+          <div className="bg-white border border-slate-200 rounded-md max-w-xl w-full overflow-hidden shadow-xl max-h-[92vh] flex flex-col">
+            <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <Vault className="w-5 h-5 text-[#F2D06B]" />
+                <div>
+                  <h3 className="font-bold text-base">Deposit Physical Gold / Bullion</h3>
+                  <p className="text-[11px] text-[#F2D06B]">
+                    Insured Intake, Ultrasonic Assay &amp; Custody Allocation Appointment
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPhysicalModal(false)}
+                aria-label="Close physical bullion deposit modal"
+                className="p-1 hover:bg-white/10 rounded"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1788,96 +2427,204 @@ export const ClientPortal: React.FC = () => {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                setTradeError('');
-                setTradeBusy(true);
-                const res = await executeSpotTrade(tradeSide, tradeProductId, tradeQty, 'USD');
-                setTradeBusy(false);
-                if (!res.ok) {
-                  setTradeError(res.error || 'Trade could not be executed.');
+                setPhysError('');
+                if (!physEstimatedWeight.trim() || !physPreferredDate || !physPhone.trim() || !physEmail.trim()) {
+                  setPhysError('Please complete all required regional vault appointment fields.');
                   return;
                 }
-                setTradeModal(false);
+
+                setPhysBusy(true);
+                const otpRes = await sendTransactionOtp();
+                setPhysBusy(false);
+
+                if (!otpRes.ok) {
+                  setPhysError(otpRes.error || 'Failed to send 6-digit security verification code.');
+                  return;
+                }
+
+                setPhysicalModal(false);
+                setTxOtpDraft({
+                  tx_type: 'Physical Vault Appointment',
+                  asset_summary: `${physAssetType} · ${physEstimatedWeight.trim()} (${physRegion})`,
+                  amount_usd: 0,
+                  currency: 'USD',
+                  settlement_rail: physRegion,
+                  sendEmailToTreasury: physSendEmailCopy,
+                  account_details: {
+                    'Vault Region': physRegion,
+                    'Metal / Asset Type': physAssetType,
+                    'Estimated Weight / Quantity': physEstimatedWeight.trim(),
+                    'Preferred Intake Date': physPreferredDate,
+                    'Contact Phone': physPhone.trim(),
+                    'Contact Email': physEmail.trim(),
+                    ...(physNotes.trim() ? { 'Assay / Armored Notes': physNotes.trim() } : {}),
+                    'Confirmation to info@bullionstar.in.net': physSendEmailCopy ? 'Yes' : 'No',
+                  },
+                });
               }}
-              className="p-5 space-y-4"
+              className="p-5 space-y-4 overflow-y-auto"
             >
-              <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded">
-                {(['Buy', 'Sell'] as const).map((side) => (
-                  <button
-                    key={side}
-                    type="button"
-                    onClick={() => setTradeSide(side)}
-                    className={`py-2 text-xs font-bold rounded-sm ${
-                      tradeSide === side ? 'bg-[#0D1F3C] text-white' : 'text-slate-600'
-                    }`}
+              <div className="bg-[#FAF7EC] border border-[#C59B27]/40 rounded p-3.5 text-xs text-slate-700 leading-relaxed">
+                <strong className="text-[#0D1F3C] block mb-0.5">
+                  Insured Intake &amp; Assay Protocol Required
+                </strong>
+                Physical gold, silver, platinum, or GIA diamond deposits cannot be credited remotely. Book a private intake &amp; ultrasonic XRF assay appointment at your nearest regional vault facility below.
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Nearest Vault Region *
+                  </label>
+                  <select
+                    value={physRegion}
+                    onChange={(e) => setPhysRegion(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
                   >
-                    {side} Against Cash
-                  </button>
-                ))}
-              </div>
+                    {VAULT_FACILITY_REGIONS.map((region) => (
+                      <option key={region} value={region}>
+                        {region}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Select Bullion / Diamond Product
-                </label>
-                <select
-                  value={tradeProductId}
-                  onChange={(e) => setTradeProductId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
-                >
-                  {products.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({formatMoney(getProductPriceUSD(p))})
-                    </option>
-                  ))}
-                </select>
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Metal / Asset Type *
+                  </label>
+                  <select
+                    value={physAssetType}
+                    onChange={(e) => setPhysAssetType(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
+                  >
+                    {PHYSICAL_DEPOSIT_ASSET_TYPES.map((asset) => (
+                      <option key={asset} value={asset}>
+                        {asset}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Quantity</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={tradeQty}
-                  onChange={(e) => setTradeQty(Math.max(1, Number(e.target.value)))}
-                  className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Estimated Weight / Quantity *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={physEstimatedWeight}
+                    onChange={(e) => setPhysEstimatedWeight(e.target.value)}
+                    placeholder="e.g. 5 kg (5x 1 kg Gold Bars)"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                  />
+                </div>
 
-              {(() => {
-                const prod = products.find((p) => p.id === tradeProductId);
-                if (!prod) return null;
-                const estUSD = getProductPriceUSD(prod) * tradeQty * (tradeSide === 'Sell' ? 0.992 : 1);
-                return (
-                  <div className="bg-[#F8FAFC] border border-slate-200 rounded p-3 text-xs flex justify-between items-center">
-                    <span className="text-slate-600">
-                      {tradeSide === 'Buy' ? 'Debit from Cash Balance' : 'Credit to Cash Balance'} (Avail:{' '}
-                      {formatMoney(cashUSD)})
-                    </span>
-                    <span className="font-mono text-sm font-bold text-[#0D1F3C] tabular-nums">
-                      {formatMoney(estUSD)}
-                    </span>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Preferred Appointment Date *
+                  </label>
+                  <div className="relative">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                      type="date"
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      value={physPreferredDate}
+                      onChange={(e) => setPhysPreferredDate(e.target.value)}
+                      className="w-full pl-8 pr-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                    />
                   </div>
-                );
-              })()}
+                </div>
 
-              {tradeError && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Contact Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    required
+                    value={physPhone}
+                    onChange={(e) => setPhysPhone(e.target.value)}
+                    placeholder="+65 9123 4567"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Contact Email *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={physEmail}
+                    onChange={(e) => setPhysEmail(e.target.value)}
+                    placeholder="client@domain.com"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Armored Logistics / Bar Serial Notes (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={physNotes}
+                    onChange={(e) => setPhysNotes(e.target.value)}
+                    placeholder="Optional refiner brands, serial list, or armored courier carrier (e.g. Brink's / Malca-Amit)"
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer bg-[#F8FAFC] border border-slate-200 rounded p-3">
+                <input
+                  type="checkbox"
+                  checked={physSendEmailCopy}
+                  onChange={(e) => setPhysSendEmailCopy(e.target.checked)}
+                  className="mt-0.5 rounded border-slate-300 text-[#0D1F3C]"
+                />
+                <span>
+                  Send vault intake appointment confirmation directly to BullionStar Custody Desk (
+                  <strong className="text-[#0D1F3C]">info@bullionstar.in.net</strong>) upon OTP verification.
+                </span>
+              </label>
+
+              {physError && (
                 <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
                   <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{tradeError}</span>
+                  <span>{physError}</span>
                 </div>
               )}
 
               <button
                 type="submit"
-                disabled={tradeBusy}
-                className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors"
+                disabled={
+                  physBusy ||
+                  !physEstimatedWeight.trim() ||
+                  !physPreferredDate ||
+                  !physPhone.trim() ||
+                  !physEmail.trim()
+                }
+                className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
               >
-                {tradeBusy ? 'Executing...' : `Execute ${tradeSide} Order Now`}
+                {physBusy
+                  ? 'Sending 6-Digit Email OTP...'
+                  : 'Continue to Security Verification'}
               </button>
             </form>
           </div>
         </div>
       )}
+
+      {/* Mandatory 6-Digit Email OTP Verification & Confirmation Modal */}
+      <TransactionOtpModal
+        draft={txOtpDraft}
+        onClose={() => setTxOtpDraft(null)}
+        onViewTransactions={() => setActiveTab('history')}
+      />
 
       {/* Full-Screen Photo Zoom Inspection Modal */}
       {lightboxMedia && (

@@ -93,10 +93,20 @@ export interface VaultHoldingItem {
   usd_value: number;
 }
 
+export type VaultTransactionStatus = 'Pending' | 'Completed' | 'Declined';
+
 export interface TransactionLogItem {
   id: string;
+  client_id?: string;
+  client_name?: string;
+  client_email?: string;
+  vault_id?: string;
   tx_type: string;
+  asset_summary?: string;
   amount_usd: number;
+  currency?: string;
+  settlement_rail?: string;
+  account_details?: Record<string, string> | null;
   status: string;
   created_at: string;
 }
