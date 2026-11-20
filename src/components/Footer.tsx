@@ -3,6 +3,7 @@ import { Globe, Mail } from 'lucide-react';
 import { useBullion } from '../context/BullionContext';
 import { SUPPORTED_LANGUAGES } from '../data/translations';
 import { LanguageCode } from '../types/bullion';
+import { BullionStarLogo } from './BullionStarLogo';
 
 export const Footer: React.FC = () => {
   const { setView, setCatalogFilter, scrollToContact, openHiddenAdmin, language, setLanguage, t } =
@@ -12,11 +13,8 @@ export const Footer: React.FC = () => {
     <footer className="bg-[#0A162B] text-slate-300 border-t border-[#1D3A68] no-print">
       <div className="max-w-[1360px] mx-auto px-4 lg:px-6 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-sm">
         <div>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-7 h-7 rounded bg-[#13294B] border border-[#C59B27]/50 flex items-center justify-center">
-              <span className="font-serif font-bold text-[#D4AF37]">B</span>
-            </div>
-            <span className="text-base font-bold text-white">{t('footer.brandTitle')}</span>
+          <div className="mb-3.5">
+            <BullionStarLogo variant="dark" size="sm" />
           </div>
           <p className="text-xs text-slate-400 leading-relaxed">{t('footer.brandDesc')}</p>
           <p className="text-xs text-slate-400 mt-3">

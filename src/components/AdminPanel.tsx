@@ -32,6 +32,7 @@ import {
   UploadedMediaItem,
   VaultTransactionStatus,
 } from '../types/bullion';
+import { BullionStarLogo } from './BullionStarLogo';
 
 const VAULT_TRANSACTIONS_SETUP_SQL = `create table if not exists public.vault_transactions (
   id uuid primary key default gen_random_uuid(),
@@ -338,12 +339,15 @@ export const AdminPanel: React.FC = () => {
     return (
       <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-12">
         <div className="max-w-md mx-auto bg-white border border-slate-200 rounded-md overflow-hidden shadow-sm">
-          <div className="bg-[#0A162B] px-6 py-5 text-white">
-            <div className="flex items-center gap-2 text-xs text-[#F2D06B] font-semibold mb-1">
-              <Shield className="w-4 h-4" />
-              <span>BullionStar Singapore Depository</span>
+          <div className="bg-[#0A162B] px-6 py-5 text-white space-y-3">
+            <BullionStarLogo variant="dark" size="sm" />
+            <div className="pt-1 border-t border-white/10">
+              <div className="flex items-center gap-2 text-xs text-[#F2D06B] font-semibold mb-1">
+                <Shield className="w-4 h-4" />
+                <span>Vault &amp; Custody Operations Gate</span>
+              </div>
+              <h1 className="font-serif text-2xl font-bold">Staff &amp; Vault Operations Login</h1>
             </div>
-            <h1 className="font-serif text-2xl font-bold">Staff &amp; Vault Operations Login</h1>
           </div>
 
           <form
@@ -432,15 +436,18 @@ export const AdminPanel: React.FC = () => {
     <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-8 space-y-6">
       {/* Header Banner */}
       <div className="bg-[#0A162B] text-white rounded-md p-6 border border-[#1D3A68] flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#F2D06B] mb-1">
-            <Shield className="w-4 h-4" />
-            <span>Staff &amp; Vault Operations · Supabase clients Table</span>
+        <div className="space-y-2.5">
+          <BullionStarLogo variant="dark" size="sm" />
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#F2D06B] mb-1">
+              <Shield className="w-4 h-4" />
+              <span>Staff &amp; Vault Operations · Supabase clients Table</span>
+            </div>
+            <h1 className="font-serif text-2xl font-bold">Client Balances, Photos &amp; Custody Allocation</h1>
+            <p className="text-xs text-slate-300 mt-1">
+              Edit Cash ($), Gold (kg), Silver (kg), Diamond Carats, Diamond Value ($), and upload client intake photos or signed documents.
+            </p>
           </div>
-          <h1 className="font-serif text-2xl font-bold">Client Balances, Photos &amp; Custody Allocation</h1>
-          <p className="text-xs text-slate-300 mt-1">
-            Edit Cash ($), Gold (kg), Silver (kg), Diamond Carats, Diamond Value ($), and upload client intake photos or signed documents.
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">

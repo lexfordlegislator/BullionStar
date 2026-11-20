@@ -16,6 +16,7 @@ import {
 import { useBullion } from '../context/BullionContext';
 import { SUPPORTED_LANGUAGES } from '../data/translations';
 import { CurrencyCode, LanguageCode, MetalType, StockLocation } from '../types/bullion';
+import { BullionStarLogo } from './BullionStarLogo';
 
 interface HeaderProps {
   onSelectMetalChart: (metal: 'Gold' | 'Silver' | 'Platinum' | 'Palladium') => void;
@@ -199,19 +200,10 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
           </button>
           <button
             onClick={() => navigateCategory('All', 'home')}
-            className="flex items-center gap-2.5 text-left group whitespace-nowrap shrink-0"
+            className="flex items-center text-left group whitespace-nowrap shrink-0 focus:outline-none"
+            aria-label="BullionStar Home"
           >
-            <div className="w-9 h-9 rounded bg-[#0D1F3C] flex items-center justify-center border border-[#C59B27]/50">
-              <span className="font-serif text-lg font-bold text-[#D4AF37] tracking-tight">B</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-[#0D1F3C] leading-none">
-                BullionStar
-              </span>
-              <span className="text-[11px] font-medium text-slate-500 mt-0.5 tracking-wide">
-                {t('header.brandSub')}
-              </span>
-            </div>
+            <BullionStarLogo variant="light" size="md" />
           </button>
         </div>
 

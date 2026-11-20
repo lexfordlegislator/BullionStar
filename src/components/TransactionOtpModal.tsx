@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { PendingVaultTransactionDraft, useBullion } from '../context/BullionContext';
 import { TransactionLogItem } from '../types/bullion';
+import { BullionStarLogo } from './BullionStarLogo';
 
 interface TransactionOtpModalProps {
   draft: PendingVaultTransactionDraft | null;
@@ -99,14 +100,12 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
   return (
     <div className="fixed inset-0 z-[60] bg-slate-900/75 flex items-center justify-center p-4 no-print">
       <div className="bg-white border border-slate-200 rounded-md max-w-lg w-full overflow-hidden shadow-2xl max-h-[94vh] overflow-y-auto">
-        <div className="bg-[#0A162B] px-6 py-4 text-white flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-[#F2D06B]" />
-            <div>
-              <p className="text-[11px] font-medium text-[#F2D06B]">
-                BullionStar Treasury Security Gate
-              </p>
-              <h3 className="font-serif text-lg font-bold">
+        <div className="bg-[#0A162B] px-6 py-4 text-white flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <BullionStarLogo variant="dark" size="sm" />
+            <div className="flex items-center gap-2 pt-0.5">
+              <ShieldCheck className="w-4 h-4 text-[#F2D06B] shrink-0" />
+              <h3 className="font-serif text-base sm:text-lg font-bold leading-snug">
                 {confirmedTx
                   ? confirmedTx.tx_type === 'Physical Metal Release'
                     ? 'Physical Precious Metal Release Initiated'
@@ -119,7 +118,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close transaction verification modal"
-            className="p-1.5 hover:bg-white/10 rounded"
+            className="p-1.5 hover:bg-white/10 rounded shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

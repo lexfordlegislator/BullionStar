@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { useBullion } from '../context/BullionContext';
+import { BullionStarLogo } from './BullionStarLogo';
 
 interface CountryDialInfo {
   name: string;
@@ -350,15 +351,15 @@ export const AuthModal: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
       <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-2xl max-h-[94vh] overflow-y-auto">
-        <div className="bg-[#0D1F3C] px-6 py-4 text-white flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-medium text-[#F2D06B]">{t('auth.depository')}</p>
-            <h2 className="font-serif text-xl font-bold">{headerTitle}</h2>
+        <div className="bg-[#0D1F3C] px-6 py-4 text-white flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <BullionStarLogo variant="dark" size="sm" />
+            <h2 className="font-serif text-lg sm:text-xl font-bold leading-snug">{headerTitle}</h2>
           </div>
           <button
             onClick={closeAuthModal}
             aria-label="Close authentication dialog"
-            className="p-1.5 hover:bg-white/10 rounded"
+            className="p-1.5 hover:bg-white/10 rounded shrink-0"
           >
             <X className="w-5 h-5" />
           </button>

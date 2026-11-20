@@ -54,6 +54,7 @@ import {
 } from '../types/bullion';
 import { ResilientImage } from './ResilientImage';
 import { TransactionOtpModal } from './TransactionOtpModal';
+import { BullionStarLogo } from './BullionStarLogo';
 
 type AccountTab =
   | 'overview'
@@ -394,9 +395,9 @@ export const ClientPortal: React.FC = () => {
     return (
       <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-12">
         <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-md overflow-hidden shadow-sm">
-          <div className="bg-[#0D1F3C] px-6 py-5 text-white">
-            <p className="text-xs font-medium text-[#F2D06B]">{t('auth.depository')}</p>
-            <h1 className="font-serif text-2xl font-bold mt-1">{t('portal.guestTitle')}</h1>
+          <div className="bg-[#0D1F3C] px-6 py-5 text-white space-y-2.5">
+            <BullionStarLogo variant="dark" size="sm" />
+            <h1 className="font-serif text-2xl font-bold pt-1">{t('portal.guestTitle')}</h1>
           </div>
           <div className="p-6 space-y-5">
             <p className="text-sm text-slate-600 leading-relaxed">{t('portal.guestDesc')}</p>
@@ -566,8 +567,9 @@ export const ClientPortal: React.FC = () => {
       {/* Left Navigation Sidebar + Main Content Area */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         <aside className="lg:col-span-3 bg-white border border-slate-200 rounded-md overflow-hidden lg:sticky lg:top-40">
-          <div className="bg-[#0A162B] px-4 py-3 text-white border-b border-[#1D3A68]">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#F2D06B]">
+          <div className="bg-[#0A162B] px-4 py-3.5 text-white border-b border-[#1D3A68] space-y-2.5">
+            <BullionStarLogo variant="dark" size="sm" />
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#F2D06B] pt-2 border-t border-white/10">
               {t('portal.menuTitle')}
             </p>
           </div>
@@ -946,6 +948,13 @@ export const ClientPortal: React.FC = () => {
             </div>
           ) : (
             <div className="max-w-xl border-2 border-[#0D1F3C]/20 rounded-md p-5 bg-[#FAFBFD] space-y-4">
+              <div className="pb-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                <BullionStarLogo variant="light" size="sm" />
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>{certificate.audit_status}</span>
+                </span>
+              </div>
               <div className="flex items-center justify-between border-b border-slate-200 pb-3">
                 <div>
                   <span className="text-[11px] text-slate-500 block">Certificate Number</span>
@@ -953,10 +962,7 @@ export const ClientPortal: React.FC = () => {
                     {certificate.certificate_no}
                   </span>
                 </div>
-                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{certificate.audit_status}</span>
-                </span>
+                <span className="text-[11px] font-mono text-slate-500">{client.vault_id}</span>
               </div>
 
               <dl className="grid grid-cols-2 gap-3 text-xs">
@@ -1929,9 +1935,9 @@ export const ClientPortal: React.FC = () => {
             </div>
 
             <div className="p-6 sm:p-8 space-y-5">
-              <div className="flex items-start justify-between border-b-2 border-[#C59B27] pb-4">
-                <div>
-                  <h3 className="font-serif text-2xl font-bold text-[#0D1F3C]">BullionStar Singapore</h3>
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-[#C59B27] pb-4">
+                <div className="space-y-1.5">
+                  <BullionStarLogo variant="light" size="md" />
                   <p className="text-xs text-slate-500">
                     45 New Bridge Road, Singapore 059398 · Allocated Depository Certificate
                   </p>
