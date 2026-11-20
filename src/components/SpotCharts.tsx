@@ -31,7 +31,10 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
     convertFromUSD,
     liveTickerActive,
     setLiveTickerActive,
+    t,
   } = useBullion();
+
+  const unitLabel = (u: WeightUnit) => t(`charts.unit.${u}`);
 
   const [timeframe, setTimeframe] = useState<Timeframe>('1M');
   const [unit, setUnit] = useState<WeightUnit>('oz');
@@ -81,11 +84,9 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
         {/* Top Bar */}
         <div className="px-5 py-4 bg-[#0D1F3C] text-white flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg sm:text-xl font-bold">
-              Live Bullion Spot Price Charts
-            </h2>
+            <h2 className="text-lg sm:text-xl font-bold">{t('charts.title')}</h2>
             <p className="text-xs text-slate-300 mt-0.5">
-              Institutional London / Zurich / Singapore OTC feed · Displayed in {currency} per {UNIT_LABEL[unit]}
+              {t('charts.subtitle', { currency, unit: unitLabel(unit) })}
             </p>
           </div>
 
@@ -99,7 +100,7 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
               }`}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${liveTickerActive ? 'animate-spin' : ''}`} style={{ animationDuration: '5s' }} />
-              <span>{liveTickerActive ? 'Live Feed Active' : 'Feed Paused'}</span>
+              <span>{liveTickerActive ? t('charts.liveActive') : t('charts.feedPaused')}</span>
             </button>
           </div>
         </div>
@@ -117,11 +118,11 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
                     onSelectMetal(m);
                     setHoverIdx(null);
                   }}
-                  className={`flex-1 px-3 py-3 text-left transition-colors ${
+                  className={`flex-1 px-3 py-3 text-start transition-colors ${
                     active ? 'bg-[#F8FAFC] border-b-2 border-[#C59B27]' : 'bg-white hover:bg-slate-50'
                   }`}
                 >
-                  <div className="text-xs font-semibold text-[#0D1F3C]">{m}</div>
+                  <div className="text-xs font-semibold text-[#0D1F3C]">{t(`metal.${m}`)}</div>
                   <div className="text-xs font-mono font-bold text-slate-800 tabular-nums mt-0.5">
                     {sym}
                     {(convertFromUSD(spotPricesUSD[m]) * UNIT_MULTIPLIER[unit]).toLocaleString('en-US', {
@@ -167,7 +168,7 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
                     unit === u ? 'bg-[#C59B27] text-[#0A162B]' : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  {UNIT_LABEL[u]}
+                  {unitLabel(u)}
                 </button>
               ))}
             </div>
@@ -186,7 +187,9 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
                 })}
               </span>
               <span className="text-xs font-medium text-slate-500">
-                {hoveredPoint ? hoveredPoint.label : `Current ${selectedMetal} Spot / ${UNIT_LABEL[unit]}`}
+                {hoveredPoint
+                  ? hoveredPoint.label
+                  : t('charts.currentSpot', { metal: t(`metal.${selectedMetal}`), unit: unitLabel(unit) })}
               </span>
               <span
                 className={`inline-flex items-center gap-1 text-xs font-mono font-semibold tabular-nums ${
@@ -201,21 +204,21 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
 
             <div className="flex items-center gap-6 text-xs font-mono tabular-nums text-slate-600">
               <div>
-                <span className="text-slate-400 mr-1.5">Period High:</span>
+                <span className="text-slate-400 me-1.5">{t('charts.periodHigh')}</span>
                 <strong className="text-slate-900">
                   {sym}
                   {maxVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </div>
               <div>
-                <span className="text-slate-400 mr-1.5">Period Low:</span>
+                <span className="text-slate-400 me-1.5">{t('charts.periodLow')}</span>
                 <strong className="text-slate-900">
                   {sym}
                   {minVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </strong>
               </div>
               <div className="hidden sm:block">
-                <span className="text-slate-400 mr-1.5">Bid / Ask:</span>
+                <span className="text-slate-400 me-1.5">{t('charts.bidAsk')}</span>
                 <strong className="text-slate-900">
                   {sym}
                   {(currentVal * 0.9985).toFixed(2)} / {sym}

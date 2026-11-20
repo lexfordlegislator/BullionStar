@@ -11,22 +11,25 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
+import { useBullion } from '../context/BullionContext';
+
 const INQUIRY_TOPICS = [
-  'Private Vault Storage',
-  'Buying Gold & Silver Bullion',
-  'GIA Certified Diamonds',
-  'Account & Security Support',
-  'Other',
+  { value: 'Private Vault Storage', key: 'contact.topic1' as const },
+  { value: 'Buying Gold & Silver Bullion', key: 'contact.topic2' as const },
+  { value: 'GIA Certified Diamonds', key: 'contact.topic3' as const },
+  { value: 'Account & Security Support', key: 'contact.topic4' as const },
+  { value: 'Other', key: 'contact.topic5' as const },
 ] as const;
 
 const WEB3FORMS_ACCESS_KEY = '5375b8ac-0f4d-48a1-ab67-4db45eda5f3c';
 const WEB3FORMS_ENDPOINT = 'https://api.web3forms.com/submit';
 
 export const ContactSection: React.FC = () => {
+  const { t } = useBullion();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [topic, setTopic] = useState<string>(INQUIRY_TOPICS[0]);
+  const [topic, setTopic] = useState<string>(INQUIRY_TOPICS[0].value);
   const [message, setMessage] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
@@ -72,7 +75,7 @@ export const ContactSection: React.FC = () => {
       setName('');
       setEmail('');
       setPhone('');
-      setTopic(INQUIRY_TOPICS[0]);
+      setTopic(INQUIRY_TOPICS[0].value);
       setMessage('');
     } catch (err) {
       setSubmitError(
@@ -93,14 +96,12 @@ export const ContactSection: React.FC = () => {
       <div className="max-w-[1360px] mx-auto px-4 lg:px-6">
         <div className="max-w-2xl mb-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#B38818] mb-2">
-            Direct Institutional Desk
+            {t('contact.kicker')}
           </p>
           <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#0D1F3C] [text-wrap:balance]">
-            Contact Us / Private Vault Inquiry
+            {t('contact.title')}
           </h2>
-          <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-            Connect directly with our Singapore bullion specialists and vault custody officers for segregated storage allocations, bespoke precious metals orders, or GIA-certified diamond acquisitions.
-          </p>
+          <p className="text-sm text-slate-600 mt-2 leading-relaxed">{t('contact.subtitle')}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
@@ -110,13 +111,11 @@ export const ContactSection: React.FC = () => {
               <div>
                 <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#F2D06B] mb-2">
                   <ShieldCheck className="w-4 h-4 text-[#D4AF37]" />
-                  <span>BullionStar Singapore Depository</span>
+                  <span>{t('contact.depository')}</span>
                 </div>
-                <h3 className="font-serif text-xl font-bold text-white">
-                  Private Client &amp; Custody Desk
-                </h3>
+                <h3 className="font-serif text-xl font-bold text-white">{t('contact.deskTitle')}</h3>
                 <p className="text-xs text-slate-300 mt-1.5 leading-relaxed">
-                  Dedicated correspondence for private individuals, family offices, and institutional bullion accounts.
+                  {t('contact.deskDesc')}
                 </p>
               </div>
 
@@ -127,7 +126,7 @@ export const ContactSection: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Direct Support Email
+                      {t('contact.supportEmail')}
                     </p>
                     <a
                       href="mailto:info@bullionstar.in.net"
@@ -144,7 +143,7 @@ export const ContactSection: React.FC = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Official Portal
+                      {t('contact.officialPortal')}
                     </p>
                     <a
                       href="https://bullionstar.in.net"
@@ -163,14 +162,12 @@ export const ContactSection: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Singapore Showroom &amp; Vault
+                      {t('contact.locationTitle')}
                     </p>
                     <p className="text-sm font-semibold text-white mt-0.5">
-                      45 New Bridge Road, Singapore 059398
+                      {t('showroom.centerAddr')}
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      Opposite Clarke Quay MRT · Biometric Class-1 Depository
-                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">{t('contact.locationNote')}</p>
                   </div>
                 </div>
 
@@ -180,24 +177,18 @@ export const ContactSection: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">
-                      Business Hours (SGT)
+                      {t('contact.hoursTitle')}
                     </p>
-                    <p className="text-xs text-slate-200 mt-0.5">
-                      Mon – Fri: 10:00 – 19:00 SGT
-                    </p>
-                    <p className="text-xs text-slate-200">
-                      Saturday: 10:00 – 15:00 SGT
-                    </p>
-                    <p className="text-xs text-slate-400">
-                      Sunday &amp; Public Holidays: Closed
-                    </p>
+                    <p className="text-xs text-slate-200 mt-0.5">{t('contact.hoursWeek')}</p>
+                    <p className="text-xs text-slate-200">{t('contact.hoursSat')}</p>
+                    <p className="text-xs text-slate-400">{t('contact.hoursSun')}</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-8 pt-5 border-t border-[#1D3A68] text-xs text-slate-400 flex items-center justify-between gap-2">
-              <span>100% Allocated · Segregated Custody</span>
+              <span>{t('contact.allocatedTag')}</span>
               <span className="font-mono text-[#F2D06B]">0% IPM GST</span>
             </div>
           </div>
@@ -206,9 +197,11 @@ export const ContactSection: React.FC = () => {
           <div className="lg:col-span-7 bg-white rounded-md border border-slate-200 p-6 sm:p-8 shadow-xs">
             <div className="border-b border-slate-100 pb-4 mb-5 flex flex-wrap items-center justify-between gap-2">
               <div>
-                <h3 className="font-serif text-xl font-bold text-[#0D1F3C]">Send an Inquiry</h3>
+                <h3 className="font-serif text-xl font-bold text-[#0D1F3C]">
+                  {t('contact.formTitle')}
+                </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  All inquiries route directly to our Singapore desk at{' '}
+                  {t('contact.formRoute')}{' '}
                   <a
                     href="mailto:info@bullionstar.in.net"
                     className="font-semibold text-[#0D1F3C] hover:text-[#B38818] underline underline-offset-2"
@@ -225,9 +218,7 @@ export const ContactSection: React.FC = () => {
                 className="mb-5 flex items-start gap-2.5 text-sm text-emerald-900 bg-emerald-50 border border-emerald-200 rounded p-4"
               >
                 <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
-                <span>
-                  Thank you! Your inquiry has been sent to info@bullionstar.in.net. Our vault specialists will respond shortly.
-                </span>
+                <span>{t('contact.successMsg')}</span>
               </div>
             )}
 
@@ -245,7 +236,7 @@ export const ContactSection: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="contact-name" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Full Name <span className="text-rose-600">*</span>
+                    {t('contact.fieldName')} <span className="text-rose-600">*</span>
                   </label>
                   <input
                     id="contact-name"
@@ -260,7 +251,7 @@ export const ContactSection: React.FC = () => {
 
                 <div>
                   <label htmlFor="contact-email" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Email Address <span className="text-rose-600">*</span>
+                    {t('contact.fieldEmail')} <span className="text-rose-600">*</span>
                   </label>
                   <input
                     id="contact-email"
@@ -277,7 +268,8 @@ export const ContactSection: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="contact-phone" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Phone Number <span className="text-slate-400 font-normal">(Optional)</span>
+                    {t('contact.fieldPhone')}{' '}
+                    <span className="text-slate-400 font-normal">{t('contact.optional')}</span>
                   </label>
                   <input
                     id="contact-phone"
@@ -291,7 +283,7 @@ export const ContactSection: React.FC = () => {
 
                 <div>
                   <label htmlFor="contact-topic" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Inquiry Topic
+                    {t('contact.fieldTopic')}
                   </label>
                   <select
                     id="contact-topic"
@@ -300,8 +292,8 @@ export const ContactSection: React.FC = () => {
                     className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
                   >
                     {INQUIRY_TOPICS.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
+                      <option key={item.value} value={item.value}>
+                        {t(item.key)}
                       </option>
                     ))}
                   </select>
@@ -310,7 +302,7 @@ export const ContactSection: React.FC = () => {
 
               <div>
                 <label htmlFor="contact-message" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Message <span className="text-rose-600">*</span>
+                  {t('contact.fieldMessage')} <span className="text-rose-600">*</span>
                 </label>
                 <textarea
                   id="contact-message"
@@ -318,15 +310,13 @@ export const ContactSection: React.FC = () => {
                   rows={4}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Share details about your bullion allocation, GIA diamond inquiry, or private vault viewing request..."
+                  placeholder={t('contact.messagePlaceholder')}
                   className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C] resize-y"
                 />
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                <p className="text-[11px] text-slate-500">
-                  Protected confidential inquiry · Typical response within 1 business day.
-                </p>
+                <p className="text-[11px] text-slate-500">{t('contact.confidentialNote')}</p>
                 <button
                   type="submit"
                   disabled={submitting}
@@ -335,12 +325,12 @@ export const ContactSection: React.FC = () => {
                   {submitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Sending Inquiry...</span>
+                      <span>{t('contact.sendingBtn')}</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>Send Inquiry</span>
+                      <span>{t('common.sendInquiry')}</span>
                     </>
                   )}
                 </button>

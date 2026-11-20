@@ -20,6 +20,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
     getProductPriceUSD,
     addToCart,
     setView,
+    t,
   } = useBullion();
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -68,7 +69,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
               {product.mintOrLab} · {product.weightLabel}
             </span>
             {product.gstExempt && (
-              <span className="text-emerald-700 font-medium shrink-0">0% GST</span>
+              <span className="text-emerald-700 font-medium shrink-0">{t('catalog.gstExempt')}</span>
             )}
           </div>
 
@@ -88,15 +89,17 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
             )}
             <div className="text-[11px] text-slate-500">
               {availableAtSelectedLocation
-                ? `In Stock · ${stockLocation} Vault`
-                : `Available in ${product.locations[0]} Vault`}
+                ? t('catalog.inStock', { location: stockLocation })
+                : t('catalog.availableIn', { location: product.locations[0] })}
             </div>
           </div>
 
           <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
             <div>
               <div className="text-[11px] text-slate-500">
-                {product.category === 'Diamond' ? 'Fixed Asset Price' : `Spot + ${product.premiumPct.toFixed(2)}%`}
+                {product.category === 'Diamond'
+                  ? t('catalog.fixedPrice')
+                  : t('catalog.spotPlus', { pct: product.premiumPct.toFixed(2) })}
               </div>
               <div className="text-base font-mono font-bold text-[#0D1F3C] tabular-nums">
                 {formatMoney(priceUSD)}
@@ -116,7 +119,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                 className="inline-flex items-center gap-1 px-3 py-2 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-semibold text-xs rounded transition-colors whitespace-nowrap shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Add</span>
+                <span>{t('catalog.add')}</span>
               </button>
             </div>
           </div>
@@ -134,10 +137,10 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
             <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-[#0D1F3C]">
-                  Trending Precious Metals
+                  {t('catalog.trendingTitle')}
                 </h2>
                 <p className="text-sm text-slate-600 mt-0.5">
-                  Live spot-linked pricing · Eligible for allocated storage in {stockLocation}
+                  {t('catalog.trendingSub', { location: stockLocation })}
                 </p>
               </div>
               <button
@@ -147,7 +150,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                 }}
                 className="text-sm font-semibold text-[#0D1F3C] hover:text-[#B38818] underline underline-offset-4 whitespace-nowrap shrink-0"
               >
-                View Full Bullion Catalog
+                {t('catalog.viewFull')}
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -160,11 +163,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
             <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-[#0D1F3C]">
-                  GIA-Certified Investment Diamonds
+                  {t('catalog.diamondsTitle')}
                 </h2>
-                <p className="text-sm text-slate-600 mt-0.5">
-                  D–E Color · IF to VVS1 Clarity · Triple Excellent cut with laser-inscribed GIA dossier
-                </p>
+                <p className="text-sm text-slate-600 mt-0.5">{t('catalog.diamondsSub')}</p>
               </div>
               <button
                 onClick={() => {
@@ -173,7 +174,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                 }}
                 className="text-sm font-semibold text-[#0D1F3C] hover:text-[#B38818] underline underline-offset-4 whitespace-nowrap shrink-0"
               >
-                View All Certified Diamonds
+                {t('catalog.viewDiamonds')}
               </button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -185,11 +186,9 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
         <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-[#0D1F3C]">
-                Bullion & Certified Diamond Exchange
-              </h1>
+              <h1 className="text-2xl font-bold text-[#0D1F3C]">{t('catalog.exchangeTitle')}</h1>
               <p className="text-sm text-slate-600 mt-1">
-                Showing {filteredProducts.length} investment-grade products · Pricing updated with live spot quotes
+                {t('catalog.showingProducts', { count: filteredProducts.length })}
               </p>
             </div>
 
@@ -204,7 +203,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                       : 'text-slate-600 hover:bg-slate-100 hover:text-[#0D1F3C]'
                   }`}
                 >
-                  {cat === 'Diamond' ? 'GIA Diamonds' : cat}
+                  {t(`metal.${cat}`)}
                 </button>
               ))}
             </div>
@@ -213,23 +212,22 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
           {searchQuery && (
             <div className="mb-5 flex items-center justify-between bg-white px-4 py-2.5 border border-slate-200 rounded text-sm">
               <span>
-                Filtered by search: <strong className="text-[#0D1F3C]">{searchQuery}</strong>
+                {t('catalog.filteredBySearch')}{' '}
+                <strong className="text-[#0D1F3C]">{searchQuery}</strong>
               </span>
               <button
                 onClick={() => setSearchQuery('')}
                 className="text-xs font-semibold text-[#B38818] hover:underline"
               >
-                Clear Filter
+                {t('catalog.clearFilter')}
               </button>
             </div>
           )}
 
           {filteredProducts.length === 0 ? (
             <div className="bg-white border border-slate-200 rounded p-12 text-center">
-              <p className="text-base font-semibold text-[#0D1F3C]">No matching bullion or diamonds found</p>
-              <p className="text-sm text-slate-500 mt-1">
-                Try clearing your search query or switching metal categories.
-              </p>
+              <p className="text-base font-semibold text-[#0D1F3C]">{t('catalog.noMatchesTitle')}</p>
+              <p className="text-sm text-slate-500 mt-1">{t('catalog.noMatchesSub')}</p>
               <button
                 onClick={() => {
                   setSearchQuery('');
@@ -237,7 +235,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                 }}
                 className="mt-4 px-4 py-2 bg-[#0D1F3C] text-white text-sm font-medium rounded"
               >
-                Reset Catalog Filters
+                {t('catalog.resetFilters')}
               </button>
             </div>
           ) : (
@@ -281,26 +279,28 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
 
                   <dl className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs border-t border-b border-slate-100 py-3">
                     <div>
-                      <dt className="text-slate-500">Mint / Laboratory</dt>
+                      <dt className="text-slate-500">{t('catalog.mintOrLab')}</dt>
                       <dd className="font-semibold text-slate-900">{selectedProduct.mintOrLab}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Weight / Carat</dt>
+                      <dt className="text-slate-500">{t('catalog.weightCarat')}</dt>
                       <dd className="font-semibold text-slate-900">{selectedProduct.weightLabel}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Purity / Grade</dt>
+                      <dt className="text-slate-500">{t('catalog.purityGrade')}</dt>
                       <dd className="font-semibold text-slate-900">{selectedProduct.purityOrGrade}</dd>
                     </div>
                     <div>
-                      <dt className="text-slate-500">Singapore GST</dt>
+                      <dt className="text-slate-500">{t('catalog.singaporeGst')}</dt>
                       <dd className="font-semibold text-emerald-700">
-                        {selectedProduct.gstExempt ? '0% Exempt (IPM)' : 'Standard Rules Apply'}
+                        {selectedProduct.gstExempt
+                          ? t('catalog.gstExemptFull')
+                          : t('catalog.gstStandard')}
                       </dd>
                     </div>
                     {selectedProduct.giaNumber && (
                       <div className="col-span-2">
-                        <dt className="text-slate-500">GIA Certificate & Cut</dt>
+                        <dt className="text-slate-500">{t('catalog.giaCut')}</dt>
                         <dd className="font-mono font-semibold text-[#0D1F3C]">
                           #{selectedProduct.giaNumber} · {selectedProduct.cutGrade}
                         </dd>
@@ -310,7 +310,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
 
                   <div className="mt-4">
                     <label className="block text-xs font-semibold text-[#0D1F3C] mb-1.5">
-                      Select Custody / Delivery Option
+                      {t('catalog.selectDelivery')}
                     </label>
                     <select
                       value={fulfillmentChoice}
@@ -324,20 +324,18 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                       }
                       className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white text-slate-900"
                     >
-                      <option value="Vault Storage (Singapore)">
-                        Allocate to Singapore Vault (Full Audit & Photo Verification)
-                      </option>
+                      <option value="Vault Storage (Singapore)">{t('catalog.optVault')}</option>
                       <option value="Showroom Pickup (45 New Bridge Rd)">
-                        Showroom Counter Pickup (45 New Bridge Road)
+                        {t('catalog.optShowroom')}
                       </option>
-                      <option value="Insured Delivery">Insured Armored Courier Delivery</option>
+                      <option value="Insured Delivery">{t('catalog.optCourier')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-4">
                   <div>
-                    <span className="text-xs text-slate-500 block">Live Execution Price</span>
+                    <span className="text-xs text-slate-500 block">{t('catalog.liveExecPrice')}</span>
                     <span className="text-xl font-mono font-bold text-[#0D1F3C] tabular-nums">
                       {formatMoney(getProductPriceUSD(selectedProduct))}
                     </span>
@@ -350,13 +348,13 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                     className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-semibold text-sm rounded transition-colors"
                   >
                     <Check className="w-4 h-4" />
-                    <span>Add to Order</span>
+                    <span>{t('catalog.addToOrder')}</span>
                   </button>
                 </div>
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-500">
                   <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span>Serialized certificate & Lloyd’s insurance active upon settlement.</span>
+                  <span>{t('catalog.assuranceNote')}</span>
                 </div>
               </div>
             </div>

@@ -10,7 +10,7 @@ interface ShowroomAndNewsProps {
 }
 
 export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetails = false }) => {
-  const { setView, isLoggedIn, demoLogin } = useBullion();
+  const { setView, isLoggedIn, demoLogin, t } = useBullion();
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [bookingConfirmed, setBookingConfirmed] = useState(false);
   const [bookingName, setBookingName] = useState('Marcus Tan');
@@ -39,48 +39,48 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
           <div className="lg:col-span-6 p-6 sm:p-8 lg:p-10 flex flex-col justify-between">
             <div>
               <p className="text-xs font-semibold text-[#B38818] tracking-wide mb-2">
-                Singapore Flagship Bullion Center & Depository
+                {t('showroom.kicker')}
               </p>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#0D1F3C] [text-wrap:balance] mb-3">
-                Visit Our Physical Singapore Showroom & Vault at 45 New Bridge Road
+                {t('showroom.title')}
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed mb-5">
-                Inspect live bullion bars, verify GIA-certified diamonds under gemological loupes, or personally audit your segregated vault locker with our custody officers across from Clarke Quay MRT.
-              </p>
+              <p className="text-sm text-slate-600 leading-relaxed mb-5">{t('showroom.desc')}</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs border-t border-b border-slate-100 py-4 mb-6">
                 <div className="flex items-start gap-2.5">
                   <MapPin className="w-4 h-4 text-[#B38818] shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-[#0D1F3C]">Singapore Bullion Center</p>
-                    <p className="text-slate-600 mt-0.5">45 New Bridge Road, Singapore 059398</p>
+                    <p className="font-semibold text-[#0D1F3C]">{t('showroom.centerTitle')}</p>
+                    <p className="text-slate-600 mt-0.5">{t('showroom.centerAddr')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <Clock className="w-4 h-4 text-[#B38818] shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-[#0D1F3C]">Showroom & Vault Hours</p>
-                    <p className="text-slate-600 mt-0.5">Mon–Fri 10:00–19:00 · Sat 10:00–15:00</p>
+                    <p className="font-semibold text-[#0D1F3C]">{t('showroom.hoursTitle')}</p>
+                    <p className="text-slate-600 mt-0.5">{t('showroom.hoursText')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-[#0D1F3C]">Class-1 Vault Architecture</p>
-                    <p className="text-slate-600 mt-0.5">Biometric airlock · 24/7 Certis Cisco response</p>
+                    <p className="font-semibold text-[#0D1F3C]">{t('showroom.archTitle')}</p>
+                    <p className="text-slate-600 mt-0.5">{t('showroom.archText')}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-semibold text-[#0D1F3C]">Independent Verification</p>
-                    <p className="text-slate-600 mt-0.5">BDO physical counts & live client tray photos</p>
+                    <p className="font-semibold text-[#0D1F3C]">{t('showroom.auditTitle')}</p>
+                    <p className="text-slate-600 mt-0.5">{t('showroom.auditText')}</p>
                   </div>
                 </div>
                 <div className="sm:col-span-2 pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <Mail className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                    <span className="font-semibold text-[#0D1F3C]">Direct Support:</span>
+                    <span className="font-semibold text-[#0D1F3C]">
+                      {t('showroom.directSupport')}
+                    </span>
                     <a
                       href="mailto:info@bullionstar.in.net"
                       className="font-semibold text-[#B38818] hover:text-[#0D1F3C] underline underline-offset-2"
@@ -102,7 +102,7 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0D1F3C] hover:bg-[#193561] text-white font-semibold text-sm rounded transition-colors whitespace-nowrap shrink-0"
               >
                 <Calendar className="w-4 h-4 text-[#F2D06B]" />
-                <span>Book Private Vault Viewing</span>
+                <span>{t('showroom.bookBtn')}</span>
               </button>
               <button
                 onClick={() => {
@@ -111,7 +111,7 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
                 }}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 text-[#0D1F3C] font-semibold text-sm rounded transition-colors whitespace-nowrap shrink-0"
               >
-                <span>Inspect Sample Vault Audit Photos</span>
+                <span>{t('showroom.inspectPhotosBtn')}</span>
               </button>
             </div>
           </div>
@@ -121,19 +121,19 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6">
             {[
               {
-                title: 'Vault Storage (Segregated)',
-                rate: '0.39% Gold · 0.59% Silver p.a.',
-                desc: 'Full legal ownership of specific serial-numbered bars stored inside Singapore. Includes biannual BDO physical bar-list verification and tray photography.',
+                title: t('showroom.vault1.title'),
+                rate: t('showroom.vault1.rate'),
+                desc: t('showroom.vault1.desc'),
               },
               {
-                title: 'Bullion Savings Program (BSP)',
-                rate: '0% Storage Fee · Instant Liquidity',
-                desc: 'Acquire fractional grams of physical gold, silver, and platinum at tight spreads with immediate convertibility into full physical bars.',
+                title: t('showroom.vault2.title'),
+                rate: t('showroom.vault2.rate'),
+                desc: t('showroom.vault2.desc'),
               },
               {
-                title: 'GIA Diamond Custody',
-                rate: '0.45% p.a. All-Risks Insured',
-                desc: 'Sealed tamper-evident parcel storage with GIA laser inscription matching and Lloyd’s of London specie underwriting.',
+                title: t('showroom.vault3.title'),
+                rate: t('showroom.vault3.rate'),
+                desc: t('showroom.vault3.desc'),
               },
             ].map((opt) => (
               <div key={opt.title} className="bg-white border border-slate-200 rounded p-5">
@@ -151,11 +151,9 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
         <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-[#0D1F3C]">
-              BullionStar Research & Market Commentary
+              {t('showroom.newsTitle')}
             </h2>
-            <p className="text-sm text-slate-600 mt-0.5">
-              Institutional insights on physical gold flows, Singapore vaulting, and gemological allocation
-            </p>
+            <p className="text-sm text-slate-600 mt-0.5">{t('showroom.newsSub')}</p>
           </div>
         </div>
 
@@ -181,7 +179,7 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
                 <span className="text-slate-500">{art.author}</span>
-                <span className="font-semibold text-[#0D1F3C]">Read Brief</span>
+                <span className="font-semibold text-[#0D1F3C]">{t('showroom.readBrief')}</span>
               </div>
             </article>
           ))}
@@ -193,7 +191,7 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
         <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-xl">
             <div className="px-5 py-4 bg-[#0D1F3C] text-white flex items-center justify-between">
-              <h3 className="font-bold text-base">Book Private Singapore Vault Viewing</h3>
+              <h3 className="font-bold text-base">{t('showroom.modalTitle')}</h3>
               <button onClick={() => setBookingModalOpen(false)} aria-label="Close booking modal">
                 <X className="w-5 h-5" />
               </button>
@@ -201,7 +199,7 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
             {bookingConfirmed ? (
               <div className="p-6 text-center space-y-3">
                 <CheckCircle2 className="w-10 h-10 text-emerald-700 mx-auto" />
-                <h4 className="text-lg font-bold text-[#0D1F3C]">Appointment Confirmed</h4>
+                <h4 className="text-lg font-bold text-[#0D1F3C]">{t('showroom.apptConfirmed')}</h4>
                 <p className="text-sm text-slate-600">
                   Reserved for <strong>{bookingName}</strong> on <strong>{bookingDate}</strong> at 45 New Bridge Road ({bookingPurpose}). Please bring photo identification for vault biometric clearance.
                 </p>
@@ -209,13 +207,15 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
                   onClick={() => setBookingModalOpen(false)}
                   className="mt-2 px-5 py-2 bg-[#0D1F3C] text-white text-sm font-semibold rounded"
                 >
-                  Done
+                  {t('common.done')}
                 </button>
               </div>
             ) : (
               <form onSubmit={handleBook} className="p-5 space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name (Per ID / Passport)</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {t('showroom.fullNameId')}
+                  </label>
                   <input
                     required
                     value={bookingName}
@@ -224,7 +224,9 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Preferred Date</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {t('showroom.prefDate')}
+                  </label>
                   <input
                     type="date"
                     required
@@ -234,7 +236,9 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Appointment Purpose</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    {t('showroom.purpose')}
+                  </label>
                   <select
                     value={bookingPurpose}
                     onChange={(e) => setBookingPurpose(e.target.value)}
@@ -249,7 +253,7 @@ export const ShowroomAndNews: React.FC<ShowroomAndNewsProps> = ({ showVaultDetai
                   type="submit"
                   className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-semibold text-sm rounded transition-colors"
                 >
-                  Confirm Vault Appointment
+                  {t('showroom.confirmAppt')}
                 </button>
               </form>
             )}

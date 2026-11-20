@@ -1,6 +1,6 @@
 export type CurrencyCode = 'SGD' | 'USD' | 'EUR' | 'AUD' | 'GBP' | 'CHF';
 export type StockLocation = 'Singapore' | 'New Zealand' | 'United States';
-export type LanguageCode = 'EN' | 'ZH' | 'MS' | 'JA';
+export type LanguageCode = 'EN' | 'ZH' | 'DE' | 'FR' | 'ES' | 'JA' | 'AR' | 'MS';
 export type MetalType = 'Gold' | 'Silver' | 'Platinum' | 'Palladium' | 'Diamond';
 export type AppView = 'home' | 'catalog' | 'charts' | 'vaults' | 'account' | 'admin';
 
@@ -93,7 +93,7 @@ export interface VaultHoldingItem {
   usd_value: number;
 }
 
-export type VaultTransactionStatus = 'Pending' | 'Completed' | 'Declined';
+export type VaultTransactionStatus = 'Pending' | 'Completed' | 'Declined' | 'Cancelled';
 
 export interface TransactionLogItem {
   id: string;

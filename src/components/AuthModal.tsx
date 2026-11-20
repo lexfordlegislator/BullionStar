@@ -85,6 +85,7 @@ export const AuthModal: React.FC = () => {
     resendLoginOtp,
     requestPasswordResetOtp,
     completePasswordResetWithOtp,
+    t,
   } = useBullion();
 
   const [mode, setMode] = useState<'signin' | 'signup'>(authModalMode);
@@ -337,21 +338,21 @@ export const AuthModal: React.FC = () => {
 
   const headerTitle =
     step === 'signup-otp'
-      ? 'Verify Email Security Code'
+      ? t('auth.titleSignupOtp')
       : step === 'signin-otp'
-      ? 'Enter 6-Digit One-Time Passcode'
+      ? t('auth.titleSigninOtp')
       : step === 'forgot-email' || step === 'forgot-verify'
-      ? 'Recover Depository Password'
+      ? t('auth.titleForgot')
       : mode === 'signup'
-      ? 'Create Depository Account'
-      : 'Sign In to Your Account';
+      ? t('auth.titleSignUp')
+      : t('auth.titleSignIn');
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
       <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-2xl max-h-[94vh] overflow-y-auto">
         <div className="bg-[#0D1F3C] px-6 py-4 text-white flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-medium text-[#F2D06B]">BullionStar Singapore Depository</p>
+            <p className="text-[11px] font-medium text-[#F2D06B]">{t('auth.depository')}</p>
             <h2 className="font-serif text-xl font-bold">{headerTitle}</h2>
           </div>
           <button
@@ -380,7 +381,7 @@ export const AuthModal: React.FC = () => {
                   : 'border-transparent text-slate-500 hover:text-[#0D1F3C]'
               }`}
             >
-              Sign In
+              {t('header.signIn')}
             </button>
             <button
               type="button"
@@ -396,7 +397,7 @@ export const AuthModal: React.FC = () => {
                   : 'border-transparent text-slate-500 hover:text-[#0D1F3C]'
               }`}
             >
-              Create Account
+              {t('header.createAccount')}
             </button>
           </div>
         )}
@@ -407,7 +408,7 @@ export const AuthModal: React.FC = () => {
             {mode === 'signup' && (
               <div>
                 <label htmlFor="auth-full-name" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Full Legal Name
+                  {t('auth.fullLegalName')}
                 </label>
                 <input
                   id="auth-full-name"
@@ -425,7 +426,7 @@ export const AuthModal: React.FC = () => {
 
             <div>
               <label htmlFor="auth-email" className="block text-xs font-semibold text-slate-700 mb-1">
-                Email Address
+                {t('auth.email')}
               </label>
               <input
                 id="auth-email"
@@ -444,7 +445,7 @@ export const AuthModal: React.FC = () => {
               <>
                 <div>
                   <label htmlFor="auth-country" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Country
+                    {t('auth.country')}
                   </label>
                   <select
                     id="auth-country"
@@ -464,10 +465,10 @@ export const AuthModal: React.FC = () => {
 
                 <div>
                   <label htmlFor="auth-phone" className="block text-xs font-semibold text-slate-700 mb-1">
-                    Phone Number
+                    {t('auth.phone')}
                   </label>
                   <div className="flex items-stretch rounded border border-slate-300 focus-within:border-[#0D1F3C] bg-white overflow-hidden">
-                    <div className="relative flex items-center gap-1.5 px-2.5 py-2 bg-[#F8FAFC] border-r border-slate-300 text-sm font-semibold text-[#0D1F3C] shrink-0 select-none hover:bg-slate-100 transition-colors">
+                    <div className="relative flex items-center gap-1.5 px-2.5 py-2 bg-[#F8FAFC] border-e border-slate-300 text-sm font-semibold text-[#0D1F3C] shrink-0 select-none hover:bg-slate-100 transition-colors">
                       <span aria-hidden="true">{selectedDialInfo.flag}</span>
                       <span className="font-mono text-xs">{selectedDialInfo.dialCode}</span>
                       <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
@@ -502,7 +503,7 @@ export const AuthModal: React.FC = () => {
 
             <div>
               <label htmlFor="auth-password" className="block text-xs font-semibold text-slate-700 mb-1">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="auth-password"
@@ -528,7 +529,7 @@ export const AuthModal: React.FC = () => {
                     }}
                     className="text-xs font-semibold text-[#B38818] hover:text-[#0D1F3C] hover:underline"
                   >
-                    Forgot Password?
+                    {t('auth.forgotPassword')}
                   </button>
                 </div>
               )}
@@ -557,11 +558,11 @@ export const AuthModal: React.FC = () => {
               <span>
                 {submitting
                   ? mode === 'signup'
-                    ? 'Sending Verification Code...'
-                    : 'Verifying Password & Sending OTP...'
+                    ? t('common.sending')
+                    : t('common.sending')
                   : mode === 'signup'
-                  ? 'Create Account & Send 6-Digit Code'
-                  : 'Continue to Email OTP Verification'}
+                  ? t('auth.createSubmit')
+                  : t('auth.signinSubmit')}
               </span>
             </button>
 
@@ -574,7 +575,7 @@ export const AuthModal: React.FC = () => {
             <div className="pt-3 border-t border-slate-200 flex items-center justify-center">
               <span className="text-[11px] text-slate-500 flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                <span>Email OTP 2FA Enforced</span>
+                <span>{t('auth.otp2faBadge')}</span>
               </span>
             </div>
           </form>
@@ -587,9 +588,7 @@ export const AuthModal: React.FC = () => {
               <MailCheck className="w-5 h-5 text-[#B38818] shrink-0 mt-0.5" />
               <div className="text-xs text-slate-700 leading-relaxed">
                 <p className="font-bold text-[#0D1F3C]">
-                  {step === 'signup-otp'
-                    ? '6-Digit Security Code Verification'
-                    : 'Mandatory Two-Factor Email OTP'}
+                  {step === 'signup-otp' ? t('auth.titleSignupOtp') : t('auth.titleSigninOtp')}
                 </p>
                 <p className="mt-1">
                   Enter the 6-digit verification code sent to{' '}
@@ -600,7 +599,7 @@ export const AuthModal: React.FC = () => {
 
             <div>
               <label htmlFor="otp-code-input" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                6-Digit Verification Code
+                {t('auth.otpLabel')}
               </label>
               <input
                 id="otp-code-input"
@@ -641,8 +640,8 @@ export const AuthModal: React.FC = () => {
                 {submitting
                   ? 'Verifying 6-Digit Code...'
                   : step === 'signup-otp'
-                  ? 'Verify & Activate Vault Account'
-                  : 'Verify & Enter Vault Dashboard'}
+                  ? t('auth.verifySignupBtn')
+                  : t('auth.verifySigninBtn')}
               </span>
             </button>
 
@@ -658,7 +657,7 @@ export const AuthModal: React.FC = () => {
                 className="inline-flex items-center gap-1 text-slate-600 hover:text-[#0D1F3C] font-medium"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back</span>
+                <span>{t('common.back')}</span>
               </button>
 
               <button
@@ -670,10 +669,10 @@ export const AuthModal: React.FC = () => {
                 <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
                 <span>
                   {resending
-                    ? 'Sending...'
+                    ? t('common.sending')
                     : resendCooldown > 0
-                    ? `Resend Code (${resendCooldown}s)`
-                    : 'Resend Code'}
+                    ? t('auth.resendCooldown', { sec: resendCooldown })
+                    : t('auth.resendCode')}
                 </span>
               </button>
             </div>
@@ -724,7 +723,7 @@ export const AuthModal: React.FC = () => {
               className="w-full py-2.5 bg-[#0D1F3C] hover:bg-[#193561] disabled:opacity-60 text-white font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
             >
               <MailCheck className="w-4 h-4 text-[#F2D06B]" />
-              <span>{submitting ? 'Sending Reset Code...' : 'Send 6-Digit Reset Code'}</span>
+              <span>{submitting ? t('common.sending') : t('auth.sendResetCode')}</span>
             </button>
 
             <div className="pt-2 border-t border-slate-200">
@@ -739,7 +738,7 @@ export const AuthModal: React.FC = () => {
                 className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-[#0D1F3C]"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Back to Sign In</span>
+                <span>{t('auth.backToSignIn')}</span>
               </button>
             </div>
           </form>
@@ -750,7 +749,7 @@ export const AuthModal: React.FC = () => {
           <form onSubmit={handleForgotResetSubmit} autoComplete="on" className="p-6 space-y-3.5">
             <div>
               <label htmlFor="reset-code-input" className="block text-xs font-semibold text-slate-700 mb-1">
-                6-Digit Reset Code (sent to {resetEmail.trim()})
+                {t('auth.otpLabel')} ({resetEmail.trim()})
               </label>
               <input
                 id="reset-code-input"
@@ -769,7 +768,7 @@ export const AuthModal: React.FC = () => {
 
             <div>
               <label htmlFor="reset-new-password" className="block text-xs font-semibold text-slate-700 mb-1">
-                New Password
+                {t('auth.password')}
               </label>
               <input
                 id="reset-new-password"
@@ -787,7 +786,7 @@ export const AuthModal: React.FC = () => {
 
             <div>
               <label htmlFor="reset-confirm-password" className="block text-xs font-semibold text-slate-700 mb-1">
-                Confirm New Password
+                {t('auth.password')}
               </label>
               <input
                 id="reset-confirm-password"
@@ -823,7 +822,7 @@ export const AuthModal: React.FC = () => {
               className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
             >
               <KeyRound className="w-4 h-4" />
-              <span>{submitting ? 'Updating Password...' : 'Verify Code & Reset Password'}</span>
+              <span>{submitting ? t('common.sending') : t('auth.resetPasswordSubmit')}</span>
             </button>
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
@@ -837,7 +836,7 @@ export const AuthModal: React.FC = () => {
                 className="inline-flex items-center gap-1 text-slate-600 hover:text-[#0D1F3C] font-medium"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                <span>Change Email</span>
+                <span>{t('common.back')}</span>
               </button>
 
               <button
@@ -849,10 +848,10 @@ export const AuthModal: React.FC = () => {
                 <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
                 <span>
                   {resending
-                    ? 'Sending...'
+                    ? t('common.sending')
                     : resendCooldown > 0
-                    ? `Resend Code (${resendCooldown}s)`
-                    : 'Resend Code'}
+                    ? t('auth.resendCooldown', { sec: resendCooldown })
+                    : t('auth.resendCode')}
                 </span>
               </button>
             </div>

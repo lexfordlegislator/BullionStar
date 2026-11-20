@@ -38,6 +38,7 @@ export const CartDrawer: React.FC = () => {
     client,
     sendTransactionOtp,
     setView,
+    t,
   } = useBullion();
 
   const [step, setStep] = useState<'cart' | 'settlement'>('cart');
@@ -154,12 +155,12 @@ export const CartDrawer: React.FC = () => {
             <div className="px-5 py-4 bg-[#0D1F3C] text-white flex items-center justify-between">
               <div>
                 <h2 className="font-bold text-base">
-                  {step === 'cart' ? 'Bullion Order Cart' : 'Payment Method & Settlement'}
+                  {step === 'cart' ? t('cart.title') : t('cart.settlementTitle')}
                 </h2>
                 <p className="text-xs text-slate-300">
                   {step === 'cart'
-                    ? `Live spot lock · Settlement in ${currency}`
-                    : 'Enter originating payment details before 6-digit OTP'}
+                    ? t('cart.liveSpotLock', { currency })
+                    : t('cart.settlementSub')}
                 </p>
               </div>
               <button
@@ -176,10 +177,8 @@ export const CartDrawer: React.FC = () => {
                 <div className="flex-1 overflow-y-auto p-5 space-y-4">
                   {cart.length === 0 ? (
                     <div className="text-center py-16">
-                      <p className="text-sm font-semibold text-[#0D1F3C]">Your order cart is empty</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Add gold, silver, platinum, or GIA-certified diamonds to allocate or ship.
-                      </p>
+                      <p className="text-sm font-semibold text-[#0D1F3C]">{t('cart.emptyTitle')}</p>
+                      <p className="text-xs text-slate-500 mt-1">{t('cart.emptyDesc')}</p>
                     </div>
                   ) : (
                     cart.map((item) => {
@@ -238,11 +237,11 @@ export const CartDrawer: React.FC = () => {
                 {cart.length > 0 && (
                   <div className="p-5 border-t border-slate-200 bg-[#F8FAFC] space-y-3">
                     <div className="flex items-center justify-between text-xs text-slate-600">
-                      <span>Singapore IPM GST</span>
-                      <span className="font-semibold text-emerald-700">0% Exempt</span>
+                      <span>{t('cart.singaporeGst')}</span>
+                      <span className="font-semibold text-emerald-700">{t('cart.gstExempt')}</span>
                     </div>
                     <div className="flex items-center justify-between text-base font-bold text-[#0D1F3C]">
-                      <span>Order Total ({currency})</span>
+                      <span>{t('cart.orderTotal', { currency })}</span>
                       <span className="font-mono tabular-nums">{formatMoney(subtotalUSD)}</span>
                     </div>
                     <button
@@ -257,11 +256,11 @@ export const CartDrawer: React.FC = () => {
                       }}
                       className="w-full py-3 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-bold text-sm rounded transition-colors"
                     >
-                      Proceed to Settlement &amp; OTP Verification
+                      {t('cart.proceedBtn')}
                     </button>
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-500 justify-center">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>6-digit email OTP &amp; treasury review required on all orders</span>
+                      <span>{t('cart.otpNote')}</span>
                     </div>
                   </div>
                 )}
@@ -278,11 +277,11 @@ export const CartDrawer: React.FC = () => {
                     className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-[#0D1F3C]"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back to Order Items ({cart.length})</span>
+                    <span>{t('cart.backToItems', { count: cart.length })}</span>
                   </button>
 
                   <div className="bg-[#F8FAFC] border border-slate-200 rounded p-3 flex items-center justify-between text-xs">
-                    <span className="text-slate-600 font-medium">Total Order Settlement</span>
+                    <span className="text-slate-600 font-medium">{t('cart.totalSettlement')}</span>
                     <span className="font-mono text-base font-bold text-[#0D1F3C] tabular-nums">
                       {formatMoney(subtotalUSD)}
                     </span>
@@ -290,7 +289,7 @@ export const CartDrawer: React.FC = () => {
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Payment / Settlement Method
+                      {t('cart.paymentMethodLabel')}
                     </label>
                     <select
                       value={paymentMethod}
@@ -341,7 +340,7 @@ export const CartDrawer: React.FC = () => {
 
                       <div className="space-y-3 pt-1">
                         <p className="text-xs font-bold text-[#0D1F3C]">
-                          Originating Payment Account / Wallet Details
+                          {t('cart.originatingDetails')}
                         </p>
                         {activeFields.map((field) => (
                           <div key={field.key}>
@@ -401,9 +400,7 @@ export const CartDrawer: React.FC = () => {
                     disabled={sendingOtp || !isSettlementValid}
                     className="w-full py-3 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-xs sm:text-sm rounded transition-colors"
                   >
-                    {sendingOtp
-                      ? 'Dispatching 6-Digit Email OTP...'
-                      : 'Continue to Security Verification'}
+                    {sendingOtp ? t('common.sending') : t('cart.continueSecurity')}
                   </button>
                 </div>
               </form>

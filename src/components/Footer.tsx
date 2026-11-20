@@ -1,9 +1,12 @@
 import React from 'react';
 import { Globe, Mail } from 'lucide-react';
 import { useBullion } from '../context/BullionContext';
+import { SUPPORTED_LANGUAGES } from '../data/translations';
+import { LanguageCode } from '../types/bullion';
 
 export const Footer: React.FC = () => {
-  const { setView, setCatalogFilter, scrollToContact, openHiddenAdmin } = useBullion();
+  const { setView, setCatalogFilter, scrollToContact, openHiddenAdmin, language, setLanguage, t } =
+    useBullion();
 
   return (
     <footer className="bg-[#0A162B] text-slate-300 border-t border-[#1D3A68] no-print">
@@ -13,15 +16,13 @@ export const Footer: React.FC = () => {
             <div className="w-7 h-7 rounded bg-[#13294B] border border-[#C59B27]/50 flex items-center justify-center">
               <span className="font-serif font-bold text-[#D4AF37]">B</span>
             </div>
-            <span className="text-base font-bold text-white">BullionStar Singapore</span>
+            <span className="text-base font-bold text-white">{t('footer.brandTitle')}</span>
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Singapore’s premier bullion dealer and non-bank precious metals depository. 100% allocated, segregated, and insured physical custody.
-          </p>
+          <p className="text-xs text-slate-400 leading-relaxed">{t('footer.brandDesc')}</p>
           <p className="text-xs text-slate-400 mt-3">
-            45 New Bridge Road, Singapore 059398
+            {t('showroom.centerAddr')}
             <br />
-            Mon–Fri 10:00–19:00 · Sat 10:00–15:00 SGT
+            {t('showroom.hoursText')}
           </p>
           <div className="mt-3 space-y-1.5 text-xs">
             <a
@@ -40,7 +41,7 @@ export const Footer: React.FC = () => {
 
         <div>
           <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">
-            Bullion &amp; Diamonds
+            {t('footer.col1Title')}
           </h4>
           <ul className="space-y-2 text-xs">
             <li>
@@ -49,9 +50,9 @@ export const Footer: React.FC = () => {
                   setCatalogFilter('Gold');
                   setView('catalog');
                 }}
-                className="hover:text-[#F2D06B]"
+                className="hover:text-[#F2D06B] text-start"
               >
-                Gold Bars &amp; Coins (0% GST)
+                {t('footer.goldLink')}
               </button>
             </li>
             <li>
@@ -60,9 +61,9 @@ export const Footer: React.FC = () => {
                   setCatalogFilter('Silver');
                   setView('catalog');
                 }}
-                className="hover:text-[#F2D06B]"
+                className="hover:text-[#F2D06B] text-start"
               >
-                Silver Cast Bars (0% GST)
+                {t('footer.silverLink')}
               </button>
             </li>
             <li>
@@ -71,9 +72,9 @@ export const Footer: React.FC = () => {
                   setCatalogFilter('Platinum');
                   setView('catalog');
                 }}
-                className="hover:text-[#F2D06B]"
+                className="hover:text-[#F2D06B] text-start"
               >
-                Platinum &amp; Palladium
+                {t('footer.platinumLink')}
               </button>
             </li>
             <li>
@@ -82,9 +83,9 @@ export const Footer: React.FC = () => {
                   setCatalogFilter('Diamond');
                   setView('catalog');
                 }}
-                className="hover:text-[#F2D06B]"
+                className="hover:text-[#F2D06B] text-start"
               >
-                GIA-Certified Investment Diamonds
+                {t('footer.diamondsLink')}
               </button>
             </li>
           </ul>
@@ -92,27 +93,30 @@ export const Footer: React.FC = () => {
 
         <div>
           <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">
-            Depository &amp; Support
+            {t('footer.col2Title')}
           </h4>
           <ul className="space-y-2 text-xs">
             <li>
-              <button onClick={() => setView('vaults')} className="hover:text-[#F2D06B]">
-                Singapore Vault Storage
+              <button onClick={() => setView('vaults')} className="hover:text-[#F2D06B] text-start">
+                {t('footer.vaultStorageLink')}
               </button>
             </li>
             <li>
-              <button onClick={() => setView('account')} className="hover:text-[#F2D06B]">
-                Client Custody Certificates
+              <button onClick={() => setView('account')} className="hover:text-[#F2D06B] text-start">
+                {t('footer.certsLink')}
               </button>
             </li>
             <li>
-              <button onClick={() => setView('charts')} className="hover:text-[#F2D06B]">
-                Live Spot Charts &amp; Research
+              <button onClick={() => setView('charts')} className="hover:text-[#F2D06B] text-start">
+                {t('footer.chartsLink')}
               </button>
             </li>
             <li>
-              <button onClick={scrollToContact} className="hover:text-[#F2D06B] text-[#F2D06B] font-semibold">
-                Contact Us / Private Vault Inquiry
+              <button
+                onClick={scrollToContact}
+                className="hover:text-[#F2D06B] text-[#F2D06B] font-semibold text-start"
+              >
+                {t('footer.contactLink')}
               </button>
             </li>
           </ul>
@@ -120,26 +124,43 @@ export const Footer: React.FC = () => {
 
         <div>
           <h4 className="text-xs font-semibold text-white uppercase tracking-wider mb-3">
-            Custody &amp; Direct Desk
+            {t('footer.col3Title')}
           </h4>
-          <p className="text-xs text-slate-400 leading-relaxed mb-3">
-            All vaulted bullion and GIA-certified diamonds are covered under an all-risks specie policy underwritten at Lloyd’s of London &amp; Chubb Singapore. Biannual independent bar counts conducted by BDO LLP.
-          </p>
-          <a
-            href="mailto:info@bullionstar.in.net"
-            className="inline-flex items-center gap-2 px-3 py-2 rounded bg-[#13294B] border border-[#C59B27]/40 text-xs font-semibold text-[#F2D06B] hover:bg-[#193561] transition-colors"
-          >
-            <Mail className="w-3.5 h-3.5 text-[#D4AF37]" />
-            <span>info@bullionstar.in.net</span>
-          </a>
+          <p className="text-xs text-slate-400 leading-relaxed mb-3">{t('footer.insuranceDesc')}</p>
+          <div className="flex flex-col items-start gap-2.5">
+            <a
+              href="mailto:info@bullionstar.in.net"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded bg-[#13294B] border border-[#C59B27]/40 text-xs font-semibold text-[#F2D06B] hover:bg-[#193561] transition-colors"
+            >
+              <Mail className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <span>info@bullionstar.in.net</span>
+            </a>
+
+            <label className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-[#13294B] border border-[#1D3A68] text-xs text-slate-200">
+              <Globe className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+              <span className="text-slate-400">{t('footer.languageLabel')}</span>
+              <select
+                aria-label={t('footer.languageLabel')}
+                value={language}
+                onChange={(e) => setLanguage(e.target.value as LanguageCode)}
+                className="bg-transparent text-white font-semibold focus:outline-none cursor-pointer"
+              >
+                {SUPPORTED_LANGUAGES.map((l) => (
+                  <option key={l.code} value={l.code} className="bg-[#0D1F3C] text-white">
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </div>
 
       <div className="border-t border-[#1A2D4D] py-4 px-4 lg:px-6 text-xs text-slate-500 max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-3">
         <span onDoubleClick={openHiddenAdmin} className="select-none">
-          © 2026 BullionStar Pte. Ltd. (Singapore UEN 201217896W) · Precious Stones &amp; Precious Metals Dealer
+          {t('footer.copyright')}
         </span>
-        <span>45 New Bridge Road · Institutional Custody &amp; Exchange</span>
+        <span>{t('footer.locationTag')}</span>
       </div>
     </footer>
   );

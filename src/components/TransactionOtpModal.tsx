@@ -24,7 +24,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
   onSuccess,
   onViewTransactions,
 }) => {
-  const { client, formatMoney, sendTransactionOtp, verifyAndSubmitTransaction } = useBullion();
+  const { client, formatMoney, sendTransactionOtp, verifyAndSubmitTransaction, t } = useBullion();
 
   const [otpCode, setOtpCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -162,10 +162,10 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
 
               <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 space-y-2.5 text-xs">
                 <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <span className="text-slate-500">Status</span>
+                  <span className="text-slate-500">{t('portal.txColStatus')}</span>
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-amber-900 font-bold">
                     <Clock className="w-3 h-3" />
-                    <span>{confirmedTx.status}</span>
+                    <span>{t('status.Pending')}</span>
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
@@ -246,7 +246,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                   onClick={onClose}
                   className="px-5 py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] text-xs font-bold rounded"
                 >
-                  Done
+                  {t('common.done')}
                 </button>
               </div>
             </div>
@@ -294,7 +294,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                 htmlFor="tx-otp-code-input"
                 className="block text-xs font-semibold text-slate-700 mb-1.5"
               >
-                6-Digit Verification Code
+                {t('auth.otpLabel')}
               </label>
               <input
                 id="tx-otp-code-input"
@@ -342,7 +342,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                 onClick={onClose}
                 className="text-slate-600 hover:text-[#0D1F3C] font-medium"
               >
-                Cancel Request
+                {t('portal.cancelRequest')}
               </button>
 
               <button
@@ -354,10 +354,10 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                 <RefreshCw className={`w-3.5 h-3.5 ${resending ? 'animate-spin' : ''}`} />
                 <span>
                   {resending
-                    ? 'Sending...'
+                    ? t('common.sending')
                     : resendCooldown > 0
-                    ? `Resend Code (${resendCooldown}s)`
-                    : 'Resend Code'}
+                    ? t('auth.resendCooldown', { sec: resendCooldown })
+                    : t('auth.resendCode')}
                 </span>
               </button>
             </div>

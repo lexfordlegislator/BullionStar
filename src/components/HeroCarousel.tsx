@@ -17,18 +17,17 @@ interface Slide {
 }
 
 export const HeroCarousel: React.FC = () => {
-  const { setView, setCatalogFilter, openAuthModal, isLoggedIn } = useBullion();
+  const { setView, setCatalogFilter, openAuthModal, isLoggedIn, t } = useBullion();
   const [index, setIndex] = useState(0);
 
   const slides: Slide[] = [
     {
       id: 'vault-custody',
-      kicker: 'Singapore Non-Bank Bullion Depository · 45 New Bridge Road',
-      title: 'Allocated Gold, Silver & Platinum Vaulted Tax-Free in Singapore',
-      subtitle:
-        'Acquire LBMA-accredited bullion bars and sovereign coins with 0% GST, direct legal title, independent BDO physical audits, and full photographic verification.',
-      ctaLabel: isLoggedIn ? 'Open Client Portal' : 'Create Account',
-      secondaryLabel: isLoggedIn ? 'Explore Precious Metals' : 'Sign In',
+      kicker: t('hero.slide1.kicker'),
+      title: t('hero.slide1.title'),
+      subtitle: t('hero.slide1.subtitle'),
+      ctaLabel: isLoggedIn ? t('hero.slide1.ctaPortal') : t('header.createAccount'),
+      secondaryLabel: isLoggedIn ? t('hero.slide1.ctaExplore') : t('header.signIn'),
       image: IMAGE_PATHS.heroVault,
       onCta: () => {
         if (isLoggedIn) setView('account');
@@ -45,12 +44,11 @@ export const HeroCarousel: React.FC = () => {
     },
     {
       id: 'gia-diamonds',
-      kicker: 'GIA Certified Investment Diamonds · Tamper-Evident Vault Custody',
-      title: 'D–E Color, Internally Flawless Investment Diamonds',
-      subtitle:
-        'Ultra-portable wealth preservation backed by GIA laser-inscribed dossiers, Global Gem Audit verification, and Lloyd’s of London specie underwriting.',
-      ctaLabel: 'Browse Certified Diamonds',
-      secondaryLabel: isLoggedIn ? 'Your Vault Certificates' : 'Create Account',
+      kicker: t('hero.slide2.kicker'),
+      title: t('hero.slide2.title'),
+      subtitle: t('hero.slide2.subtitle'),
+      ctaLabel: t('hero.slide2.cta'),
+      secondaryLabel: isLoggedIn ? t('hero.slide2.secondaryAccount') : t('header.createAccount'),
       image: IMAGE_PATHS.diamond,
       onCta: () => {
         setCatalogFilter('Diamond');
@@ -63,12 +61,11 @@ export const HeroCarousel: React.FC = () => {
     },
     {
       id: 'showroom-exchange',
-      kicker: 'Retail Showroom & Live Spot Execution · Singapore CBD',
-      title: 'Instant Live Spot Pricing with Immediate Vault Allocation',
-      subtitle:
-        'Visit our flagship bullion center across from Clarke Quay or execute 24/7 online trades against SGD, USD, and EUR cash balances.',
-      ctaLabel: 'View Live Spot Charts',
-      secondaryLabel: 'Singapore Vault Showroom',
+      kicker: t('hero.slide3.kicker'),
+      title: t('hero.slide3.title'),
+      subtitle: t('hero.slide3.subtitle'),
+      ctaLabel: t('hero.slide3.cta'),
+      secondaryLabel: t('hero.slide3.secondary'),
       image: IMAGE_PATHS.showroom,
       onCta: () => setView('charts'),
       onSecondary: () => setView('vaults'),
@@ -161,20 +158,20 @@ export const HeroCarousel: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-slate-200 border border-slate-200 rounded mt-4 overflow-hidden">
           {[
             {
-              title: '0% GST Investment Metals',
-              desc: 'Singapore IPM tax exemption on qualifying gold, silver & platinum',
+              title: t('hero.trust1.title'),
+              desc: t('hero.trust1.desc'),
             },
             {
-              title: '100% Allocated Legal Title',
-              desc: 'Segregated bars with stamped serials & individual custody certificates',
+              title: t('hero.trust2.title'),
+              desc: t('hero.trust2.desc'),
             },
             {
-              title: 'All-Risks Vault Insurance',
-              desc: 'Underwritten up to US$500M by Lloyd’s of London & Chubb',
+              title: t('hero.trust3.title'),
+              desc: t('hero.trust3.desc'),
             },
             {
-              title: 'Physical & Photo Audits',
-              desc: 'Independent BDO bar counts plus high-resolution tray verification',
+              title: t('hero.trust4.title'),
+              desc: t('hero.trust4.desc'),
             },
           ].map((stat) => (
             <div key={stat.title} className="bg-[#F8FAFC] px-4 py-3 flex items-start gap-3">

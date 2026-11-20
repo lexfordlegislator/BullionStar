@@ -14,18 +14,12 @@ import {
   X,
 } from 'lucide-react';
 import { useBullion } from '../context/BullionContext';
+import { SUPPORTED_LANGUAGES } from '../data/translations';
 import { CurrencyCode, LanguageCode, MetalType, StockLocation } from '../types/bullion';
 
 interface HeaderProps {
   onSelectMetalChart: (metal: 'Gold' | 'Silver' | 'Platinum' | 'Palladium') => void;
 }
-
-const LANGUAGES: { code: LanguageCode; label: string }[] = [
-  { code: 'EN', label: 'English' },
-  { code: 'ZH', label: '中文 (简体)' },
-  { code: 'MS', label: 'Bahasa' },
-  { code: 'JA', label: '日本語' },
-];
 
 const CURRENCIES: CurrencyCode[] = ['USD', 'SGD', 'EUR', 'AUD', 'GBP', 'CHF'];
 const LOCATIONS: StockLocation[] = ['Singapore', 'New Zealand', 'United States'];
@@ -38,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
     setCatalogFilter,
     language,
     setLanguage,
+    t,
     currency,
     setCurrency,
     stockLocation,
@@ -98,11 +93,12 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
               <Globe className="w-3.5 h-3.5 text-[#C59B27]" />
               <span className="sr-only">Language</span>
               <select
+                aria-label={t('footer.languageLabel')}
                 value={language}
                 onChange={(e) => setLanguage(e.target.value as LanguageCode)}
                 className="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer pr-1"
               >
-                {LANGUAGES.map((l) => (
+                {SUPPORTED_LANGUAGES.map((l) => (
                   <option key={l.code} value={l.code} className="bg-[#0D1F3C] text-white">
                     {l.label}
                   </option>
@@ -113,7 +109,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
             <span className="text-slate-600" aria-hidden="true">|</span>
 
             <label className="flex items-center gap-1 whitespace-nowrap shrink-0">
-              <span className="text-slate-400">Currency:</span>
+              <span className="text-slate-400">{t('header.currency')}</span>
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
@@ -131,7 +127,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
 
             <label className="hidden sm:flex items-center gap-1.5 whitespace-nowrap shrink-0">
               <MapPin className="w-3.5 h-3.5 text-[#C59B27]" />
-              <span className="text-slate-400">Stock Location:</span>
+              <span className="text-slate-400">{t('header.stockLocation')}</span>
               <select
                 value={stockLocation}
                 onChange={(e) => setStockLocation(e.target.value as StockLocation)}
@@ -168,9 +164,9 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                       setView('charts');
                     }}
                     className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#13294B] hover:bg-[#1C3863] transition-colors whitespace-nowrap shrink-0"
-                    title={`View ${metal} Spot Chart`}
+                    title={`${t(`metal.${metal}`)}`}
                   >
-                    <span className="text-slate-300 font-medium">{metal}</span>
+                    <span className="text-slate-300 font-medium">{t(`metal.${metal}`)}</span>
                     <span className="font-mono font-semibold text-white tabular-nums">
                       {formatMoney(spotPricesUSD[metal])}
                     </span>
@@ -213,7 +209,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                 BullionStar
               </span>
               <span className="text-[11px] font-medium text-slate-500 mt-0.5 tracking-wide">
-                Singapore · 45 New Bridge Rd
+                {t('header.brandSub')}
               </span>
             </div>
           </button>
@@ -235,13 +231,13 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setTimeout(() => setSearchFocused(false), 180)}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search gold bars, silver coins, platinum, or GIA report..."
-              className="w-full h-10 pl-4 pr-11 text-sm bg-[#F4F6F9] border border-slate-200 rounded text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#0D1F3C]"
+              placeholder={t('header.searchPlaceholder')}
+              className="w-full h-10 ps-4 pe-11 text-sm bg-[#F4F6F9] border border-slate-200 rounded text-slate-900 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-[#0D1F3C]"
             />
             <button
               type="submit"
               aria-label="Search Catalog"
-              className="absolute right-1 top-1 bottom-1 px-3 bg-[#0D1F3C] text-white rounded-sm hover:bg-[#183563] transition-colors flex items-center justify-center"
+              className="absolute end-1 top-1 bottom-1 px-3 bg-[#0D1F3C] text-white rounded-sm hover:bg-[#183563] transition-colors flex items-center justify-center"
             >
               <Search className="w-4 h-4" />
             </button>
@@ -283,14 +279,14 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                 onClick={() => openAuthModal('signin')}
                 className="px-3 py-2 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-xs sm:text-sm font-semibold text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
               >
-                Sign In
+                {t('header.signIn')}
               </button>
               <button
                 onClick={() => openAuthModal('signup')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0D1F3C] hover:bg-[#193561] text-white rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
               >
                 <UserPlus className="w-3.5 h-3.5 text-[#F2D06B]" />
-                <span>Create Account</span>
+                <span>{t('header.createAccount')}</span>
               </button>
             </div>
           ) : (
@@ -325,18 +321,18 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                       setView('account');
                       setAccountDropdown(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-[#F4F6F9]"
+                    className="w-full text-start px-4 py-2 text-sm text-slate-700 hover:bg-[#F4F6F9]"
                   >
-                    Your Account & Dashboard
+                    {t('header.yourAccountDashboard')}
                   </button>
                   <button
                     onClick={() => {
                       logout();
                       setAccountDropdown(false);
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-rose-700 hover:bg-rose-50 border-t border-slate-100 mt-1"
+                    className="w-full text-start px-4 py-2 text-sm text-rose-700 hover:bg-rose-50 border-t border-slate-100 mt-1"
                   >
-                    Sign Out
+                    {t('header.signOut')}
                   </button>
                 </div>
               )}
@@ -361,15 +357,15 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
         <div className="max-w-[1360px] mx-auto px-4 lg:px-6 hidden lg:flex items-center justify-between">
           <div className="flex items-center">
             {[
-              { label: 'Precious Metals', active: view === 'catalog' || view === 'home', action: () => navigateCategory('All', 'catalog') },
-              { label: 'Gold Bullion', active: false, action: () => navigateCategory('Gold', 'catalog') },
-              { label: 'Silver Bullion', active: false, action: () => navigateCategory('Silver', 'catalog') },
-              { label: 'Platinum & Palladium', active: false, action: () => navigateCategory('Platinum', 'catalog') },
-              { label: 'Certified Diamonds', active: false, action: () => navigateCategory('Diamond', 'catalog') },
-              { label: 'Storage & Vaults', active: view === 'vaults', action: () => navigateCategory('All', 'vaults') },
-              { label: 'Spot Charts & Research', active: view === 'charts', action: () => navigateCategory('All', 'charts') },
-              { label: 'Your Account', active: view === 'account', action: () => navigateCategory('All', 'account') },
-              { label: 'Contact', active: false, action: () => { setMobileMenuOpen(false); scrollToContact(); } },
+              { label: t('nav.preciousMetals'), active: view === 'catalog' || view === 'home', action: () => navigateCategory('All', 'catalog') },
+              { label: t('nav.goldBullion'), active: false, action: () => navigateCategory('Gold', 'catalog') },
+              { label: t('nav.silverBullion'), active: false, action: () => navigateCategory('Silver', 'catalog') },
+              { label: t('nav.platinumPalladium'), active: false, action: () => navigateCategory('Platinum', 'catalog') },
+              { label: t('nav.certifiedDiamonds'), active: false, action: () => navigateCategory('Diamond', 'catalog') },
+              { label: t('nav.storageVaults'), active: view === 'vaults', action: () => navigateCategory('All', 'vaults') },
+              { label: t('nav.spotChartsResearch'), active: view === 'charts', action: () => navigateCategory('All', 'charts') },
+              { label: t('nav.yourAccount'), active: view === 'account', action: () => navigateCategory('All', 'account') },
+              { label: t('nav.contact'), active: false, action: () => { setMobileMenuOpen(false); scrollToContact(); } },
             ].map((item) => (
               <button
                 key={item.label}
@@ -385,7 +381,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
             ))}
           </div>
           <div className="hidden 2xl:block text-xs text-slate-300 font-medium whitespace-nowrap shrink-0">
-            0% GST on Investment Precious Metals in Singapore
+            {t('header.gstNotice')}
           </div>
         </div>
 
@@ -396,25 +392,25 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search bullion or GIA number..."
+                placeholder={t('header.mobileSearchPlaceholder')}
                 className="w-full px-3 py-2 text-sm bg-[#13294B] border border-[#274980] rounded text-white placeholder:text-slate-400"
               />
             </div>
             {[
-              { label: 'Home Exchange', action: () => navigateCategory('All', 'home') },
-              { label: 'All Precious Metals', action: () => navigateCategory('All', 'catalog') },
-              { label: 'Gold Bullion', action: () => navigateCategory('Gold', 'catalog') },
-              { label: 'Silver Bullion', action: () => navigateCategory('Silver', 'catalog') },
-              { label: 'Certified Diamonds (GIA)', action: () => navigateCategory('Diamond', 'catalog') },
-              { label: 'Storage & Singapore Vaults', action: () => navigateCategory('All', 'vaults') },
-              { label: 'Live Spot Charts & Research', action: () => navigateCategory('All', 'charts') },
-              { label: 'Your Account Portal', action: () => navigateCategory('All', 'account') },
-              { label: 'Contact Us', action: () => { setMobileMenuOpen(false); scrollToContact(); } },
+              { label: t('nav.homeExchange'), action: () => navigateCategory('All', 'home') },
+              { label: t('nav.allPreciousMetals'), action: () => navigateCategory('All', 'catalog') },
+              { label: t('nav.goldBullion'), action: () => navigateCategory('Gold', 'catalog') },
+              { label: t('nav.silverBullion'), action: () => navigateCategory('Silver', 'catalog') },
+              { label: t('nav.certifiedDiamonds'), action: () => navigateCategory('Diamond', 'catalog') },
+              { label: t('nav.storageSingaporeVaults'), action: () => navigateCategory('All', 'vaults') },
+              { label: t('nav.liveSpotCharts'), action: () => navigateCategory('All', 'charts') },
+              { label: t('nav.yourAccountPortal'), action: () => navigateCategory('All', 'account') },
+              { label: t('nav.contactUs'), action: () => { setMobileMenuOpen(false); scrollToContact(); } },
             ].map((nav) => (
               <button
                 key={nav.label}
                 onClick={nav.action}
-                className="block w-full text-left px-3 py-2 text-sm text-slate-200 hover:bg-[#193561] rounded"
+                className="block w-full text-start px-3 py-2 text-sm text-slate-200 hover:bg-[#193561] rounded"
               >
                 {nav.label}
               </button>

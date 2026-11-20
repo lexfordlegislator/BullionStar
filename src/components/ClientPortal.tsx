@@ -95,7 +95,9 @@ export const ClientPortal: React.FC = () => {
     products,
     getProductPriceUSD,
     sendTransactionOtp,
+    cancelClientTransaction,
     setView,
+    t,
   } = useBullion();
 
   const [activeTab, setActiveTab] = useState<AccountTab>('overview');
@@ -166,6 +168,9 @@ export const ClientPortal: React.FC = () => {
 
   const [txFilter, setTxFilter] = useState('All');
   const [txSearch, setTxSearch] = useState('');
+  const [confirmCancelTxId, setConfirmCancelTxId] = useState<string | null>(null);
+  const [cancellingTxId, setCancellingTxId] = useState<string | null>(null);
+  const [txCancelError, setTxCancelError] = useState('');
 
   // Security & Account Settings State
   const [secNewPassword, setSecNewPassword] = useState('');
@@ -390,13 +395,11 @@ export const ClientPortal: React.FC = () => {
       <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-12">
         <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-md overflow-hidden shadow-sm">
           <div className="bg-[#0D1F3C] px-6 py-5 text-white">
-            <p className="text-xs font-medium text-[#F2D06B]">BullionStar Singapore Depository</p>
-            <h1 className="font-serif text-2xl font-bold mt-1">Your Account Client Portal</h1>
+            <p className="text-xs font-medium text-[#F2D06B]">{t('auth.depository')}</p>
+            <h1 className="font-serif text-2xl font-bold mt-1">{t('portal.guestTitle')}</h1>
           </div>
           <div className="p-6 space-y-5">
-            <p className="text-sm text-slate-600 leading-relaxed">
-              Sign in or create a depository account to view your Vault ID, USD cash balance, gold and silver kilogram holdings, certified diamonds, and official safekeeping certificates.
-            </p>
+            <p className="text-sm text-slate-600 leading-relaxed">{t('portal.guestDesc')}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
@@ -404,26 +407,24 @@ export const ClientPortal: React.FC = () => {
                 className="py-3 px-4 bg-[#0D1F3C] hover:bg-[#193561] text-white font-semibold text-sm rounded transition-colors flex items-center justify-center gap-2"
               >
                 <Lock className="w-4 h-4 text-[#F2D06B]" />
-                <span>Sign In with Email</span>
+                <span>{t('portal.signInEmail')}</span>
               </button>
               <button
                 onClick={() => openAuthModal('signup')}
                 className="py-3 px-4 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
               >
                 <UserPlus className="w-4 h-4" />
-                <span>Create Account</span>
+                <span>{t('header.createAccount')}</span>
               </button>
             </div>
 
             <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="text-xs text-slate-500">
-                Want to preview a populated institutional portfolio first?
-              </div>
+              <div className="text-xs text-slate-500">{t('portal.demoPreviewPrompt')}</div>
               <button
                 onClick={demoLogin}
                 className="px-3.5 py-2 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-xs font-semibold text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
               >
-                One-Click Demo Client Login
+                {t('portal.demoLogin')}
               </button>
             </div>
           </div>
@@ -441,7 +442,7 @@ export const ClientPortal: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2 text-xs text-[#F2D06B] mb-1">
               <span className="font-mono font-semibold">{client.vault_id || 'BS-SG'}</span>
               <span aria-hidden="true">·</span>
-              <span>{isDemoMode ? 'Demo Preview Mode' : 'Singapore Segregated Vault'}</span>
+              <span>{isDemoMode ? t('portal.demoMode') : t('portal.segregatedVault')}</span>
               <span aria-hidden="true">·</span>
               <span>{client.country}</span>
               {client.created_at && (
@@ -465,7 +466,7 @@ export const ClientPortal: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#13294B] hover:bg-[#1E3D6E] disabled:opacity-60 border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-[#F2D06B] ${refreshingClient ? 'animate-spin' : ''}`} />
-              <span>{refreshingClient ? 'Refreshing...' : 'Refresh'}</span>
+              <span>{refreshingClient ? t('common.refreshing') : t('common.refresh')}</span>
             </button>
             <button
               onClick={() => {
@@ -478,7 +479,7 @@ export const ClientPortal: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
             >
               <Wallet className="w-4 h-4 text-[#F2D06B]" />
-              <span>Deposit / Withdraw Cash</span>
+              <span>{t('portal.btnDepositWithdraw')}</span>
             </button>
             <button
               onClick={() => {
@@ -493,14 +494,14 @@ export const ClientPortal: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
             >
               <Vault className="w-4 h-4 text-[#F2D06B]" />
-              <span>Deposit Physical Gold / Bullion</span>
+              <span>{t('portal.btnDepositPhysical')}</span>
             </button>
             <button
               onClick={openReleaseModal}
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-[#C59B27]/50 rounded text-xs sm:text-sm font-semibold text-[#F2D06B] transition-colors whitespace-nowrap shrink-0"
             >
               <Truck className="w-4 h-4 text-[#F2D06B]" />
-              <span>Release Precious Metals</span>
+              <span>{t('portal.btnReleaseMetals')}</span>
             </button>
             <button
               onClick={() => {
@@ -513,7 +514,7 @@ export const ClientPortal: React.FC = () => {
               className="inline-flex items-center gap-2 px-4 py-2 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded text-xs sm:text-sm font-bold transition-colors whitespace-nowrap shrink-0"
             >
               <ArrowDownUp className="w-4 h-4" />
-              <span>Buy / Sell Bullion</span>
+              <span>{t('portal.btnBuySell')}</span>
             </button>
           </div>
         </div>
@@ -521,19 +522,19 @@ export const ClientPortal: React.FC = () => {
         {/* 5 Portfolio KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6 pt-5 border-t border-white/10">
           <div>
-            <p className="text-xs text-slate-300">Total Portfolio Value ({currency})</p>
+            <p className="text-xs text-slate-300">{t('portal.kpiTotalPortfolio', { currency })}</p>
             <p className="text-2xl font-mono font-bold text-white tabular-nums mt-1">
               {formatMoney(totalPortfolioUSD)}
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-300">Cash Balance (USD)</p>
+            <p className="text-xs text-slate-300">{t('portal.kpiCash')}</p>
             <p className="text-xl font-mono font-semibold text-[#F2D06B] tabular-nums mt-1">
               {formatMoney(cashUSD)}
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-300">Stored Gold</p>
+            <p className="text-xs text-slate-300">{t('portal.kpiGold')}</p>
             <p className="text-xl font-mono font-semibold text-white tabular-nums mt-1">
               {goldKg.toFixed(2)} kg
               <span className="block text-[11px] text-slate-300 font-normal">
@@ -542,7 +543,7 @@ export const ClientPortal: React.FC = () => {
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-300">Stored Silver</p>
+            <p className="text-xs text-slate-300">{t('portal.kpiSilver')}</p>
             <p className="text-xl font-mono font-semibold text-white tabular-nums mt-1">
               {silverKg.toFixed(2)} kg
               <span className="block text-[11px] text-slate-300 font-normal">
@@ -551,7 +552,7 @@ export const ClientPortal: React.FC = () => {
             </p>
           </div>
           <div>
-            <p className="text-xs text-slate-300">Certified Diamonds</p>
+            <p className="text-xs text-slate-300">{t('portal.kpiDiamonds')}</p>
             <p className="text-xl font-mono font-semibold text-white tabular-nums mt-1">
               {diamondCarats.toFixed(2)} ct
               <span className="block text-[11px] text-slate-300 font-normal">
@@ -567,19 +568,19 @@ export const ClientPortal: React.FC = () => {
         <aside className="lg:col-span-3 bg-white border border-slate-200 rounded-md overflow-hidden lg:sticky lg:top-40">
           <div className="bg-[#0A162B] px-4 py-3 text-white border-b border-[#1D3A68]">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[#F2D06B]">
-              Depository Menu
+              {t('portal.menuTitle')}
             </p>
           </div>
           <nav aria-label="Client dashboard navigation" className="p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible">
             {[
-              { id: 'overview' as AccountTab, label: 'Cash & Asset Dashboard' },
-              { id: 'holdings' as AccountTab, label: `Vault Holdings (${holdings.length})` },
-              { id: 'certificates' as AccountTab, label: 'Vault Certificate' },
-              { id: 'photos' as AccountTab, label: 'High-Res Photo Verification' },
-              { id: 'documents' as AccountTab, label: `Photos & Documents (${uploadedMedia.length})` },
-              { id: 'audits' as AccountTab, label: 'Audit & Insurance Reports' },
-              { id: 'history' as AccountTab, label: `Transactions (${transactions.length})` },
-              { id: 'security' as AccountTab, label: 'Security & Account Settings' },
+              { id: 'overview' as AccountTab, label: t('portal.tabOverview') },
+              { id: 'holdings' as AccountTab, label: t('portal.tabHoldings', { count: holdings.length }) },
+              { id: 'certificates' as AccountTab, label: t('portal.tabCertificates') },
+              { id: 'photos' as AccountTab, label: t('portal.tabPhotos') },
+              { id: 'documents' as AccountTab, label: t('portal.tabDocuments', { count: uploadedMedia.length }) },
+              { id: 'audits' as AccountTab, label: t('portal.tabAudits') },
+              { id: 'history' as AccountTab, label: t('portal.tabHistory', { count: transactions.length }) },
+              { id: 'security' as AccountTab, label: t('portal.tabSecurity') },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -589,10 +590,10 @@ export const ClientPortal: React.FC = () => {
                     refreshClientTransactions();
                   }
                 }}
-                className={`px-3.5 py-2.5 text-left text-xs sm:text-sm font-semibold rounded-sm transition-colors whitespace-nowrap lg:whitespace-normal shrink-0 flex items-center justify-between gap-2 ${
+                className={`px-3.5 py-2.5 text-start text-xs sm:text-sm font-semibold rounded-sm transition-colors whitespace-nowrap lg:whitespace-normal shrink-0 flex items-center justify-between gap-2 ${
                   activeTab === tab.id
-                    ? 'bg-[#0D1F3C] text-[#F2D06B] border-l-4 border-[#C59B27]'
-                    : 'text-slate-700 hover:bg-[#F4F6F9] hover:text-[#0D1F3C] border-l-4 border-transparent'
+                    ? 'bg-[#0D1F3C] text-[#F2D06B] border-s-4 border-[#C59B27]'
+                    : 'text-slate-700 hover:bg-[#F4F6F9] hover:text-[#0D1F3C] border-s-4 border-transparent'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -608,14 +609,16 @@ export const ClientPortal: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-5 bg-white border border-slate-200 rounded p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-[#0D1F3C]">Vault Asset Summary</h2>
+              <h2 className="text-base font-bold text-[#0D1F3C]">
+                {t('portal.vaultAssetSummary')}
+              </h2>
               <button
                 onClick={refreshClientSession}
                 disabled={refreshingClient}
                 className="inline-flex items-center gap-1 text-xs font-semibold text-[#B38818] hover:underline"
               >
                 <RefreshCw className={`w-3 h-3 ${refreshingClient ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
+                <span>{t('common.refresh')}</span>
               </button>
             </div>
 
@@ -664,7 +667,9 @@ export const ClientPortal: React.FC = () => {
             </div>
 
             <div className="pt-3 border-t border-slate-100">
-              <h3 className="text-xs font-semibold text-slate-700 mb-2">Portfolio Composition</h3>
+              <h3 className="text-xs font-semibold text-slate-700 mb-2">
+                {t('portal.portfolioComposition')}
+              </h3>
               {totalPortfolioUSD <= 0 ? (
                 <p className="text-xs text-slate-500 py-2">
                   Balance is $0.00 across cash and metals. Fund cash or await vault allocation.
@@ -708,7 +713,7 @@ export const ClientPortal: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded p-5">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-3">
                 <h2 className="text-base font-bold text-[#0D1F3C]">
-                  Allocated Bullion & Certified Diamonds
+                  {t('portal.allocatedTitle')}
                 </h2>
                 <div className="flex items-center gap-3">
                   <button
@@ -716,13 +721,13 @@ export const ClientPortal: React.FC = () => {
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0D1F3C] hover:bg-[#193561] text-[#F2D06B] text-xs font-semibold rounded transition-colors"
                   >
                     <Truck className="w-3.5 h-3.5" />
-                    <span>Release Precious Metals</span>
+                    <span>{t('portal.btnReleaseMetals')}</span>
                   </button>
                   <button
                     onClick={() => setActiveTab('holdings')}
                     className="text-xs font-semibold text-[#0D1F3C] hover:text-[#B38818] underline"
                   >
-                    View Breakdown ({holdings.length})
+                    {t('portal.viewBreakdown', { count: holdings.length })}
                   </button>
                 </div>
               </div>
@@ -810,14 +815,14 @@ export const ClientPortal: React.FC = () => {
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-[#B38818]" />
-                    <h2 className="text-base font-bold text-[#0D1F3C]">Vault Notifications</h2>
+                    <h2 className="text-base font-bold text-[#0D1F3C]">{t('portal.notificationsTitle')}</h2>
                   </div>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllNotificationsRead}
                       className="text-xs font-medium text-slate-600 hover:text-[#0D1F3C]"
                     >
-                      Mark all read
+                      {t('portal.markAllRead')}
                     </button>
                   )}
                 </div>
@@ -848,7 +853,9 @@ export const ClientPortal: React.FC = () => {
         <div className="bg-white border border-slate-200 rounded overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-[#0D1F3C]">Allocated Vault Holdings</h2>
+              <h2 className="text-base font-bold text-[#0D1F3C]">
+                {t('portal.tabHoldings', { count: holdings.length })}
+              </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Physical bullion and certified diamonds stored under {client.vault_id}
               </p>
@@ -859,7 +866,7 @@ export const ClientPortal: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded text-xs font-bold transition-colors"
               >
                 <Truck className="w-3.5 h-3.5" />
-                <span>Release Precious Metals</span>
+                <span>{t('portal.btnReleaseMetals')}</span>
               </button>
               {holdings.length > 0 && (
                 <button
@@ -867,7 +874,7 @@ export const ClientPortal: React.FC = () => {
                   className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded text-xs font-semibold text-[#0D1F3C] hover:bg-slate-50"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Export Holdings CSV</span>
+                  <span>{t('portal.exportCsv')}</span>
                 </button>
               )}
             </div>
@@ -1386,10 +1393,8 @@ export const ClientPortal: React.FC = () => {
         <div className="bg-white border border-slate-200 rounded overflow-hidden">
           <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-bold text-[#0D1F3C]">Transactions &amp; Treasury Ledger</h2>
-              <p className="text-xs text-slate-500">
-                OTP-verified deposits, withdrawals, bullion orders, and physical intake appointments
-              </p>
+              <h2 className="text-base font-bold text-[#0D1F3C]">{t('portal.txTitle')}</h2>
+              <p className="text-xs text-slate-500">{t('portal.txSubtitle')}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -1398,16 +1403,16 @@ export const ClientPortal: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 hover:bg-slate-50 rounded text-xs font-semibold text-[#0D1F3C]"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-[#B38818] ${transactionsLoading ? 'animate-spin' : ''}`} />
-                <span>{transactionsLoading ? 'Syncing...' : 'Refresh'}</span>
+                <span>{transactionsLoading ? t('common.refreshing') : t('common.refresh')}</span>
               </button>
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute start-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={txSearch}
                   onChange={(e) => setTxSearch(e.target.value)}
-                  placeholder="Search transactions..."
-                  className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded w-44 sm:w-48"
+                  placeholder={t('portal.txSearchPlaceholder')}
+                  className="ps-8 pe-3 py-1.5 text-xs border border-slate-300 rounded w-44 sm:w-48"
                 />
               </div>
               <select
@@ -1415,13 +1420,21 @@ export const ClientPortal: React.FC = () => {
                 onChange={(e) => setTxFilter(e.target.value)}
                 className="px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-semibold"
               >
-                <option value="All">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Completed">Completed</option>
-                <option value="Declined">Declined</option>
+                <option value="All">{t('status.All')}</option>
+                <option value="Pending">{t('status.Pending')}</option>
+                <option value="Completed">{t('status.Completed')}</option>
+                <option value="Declined">{t('status.Declined')}</option>
+                <option value="Cancelled">{t('status.Cancelled')}</option>
               </select>
             </div>
           </div>
+
+          {txCancelError && (
+            <div className="mx-4 mt-4 flex items-start gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{txCancelError}</span>
+            </div>
+          )}
 
           {filteredTx.length === 0 ? (
             <div className="p-10 text-center text-sm text-slate-500">
@@ -1434,11 +1447,14 @@ export const ClientPortal: React.FC = () => {
               <table className="w-full text-xs">
                 <thead className="bg-[#F8FAFC] text-slate-600 border-b border-slate-200">
                   <tr>
-                    <th className="py-2.5 px-4 text-left font-semibold">Date &amp; Time</th>
-                    <th className="py-2.5 px-4 text-left font-semibold">Type &amp; Details</th>
-                    <th className="py-2.5 px-4 text-left font-semibold">Settlement Rail &amp; Account Info</th>
-                    <th className="py-2.5 px-4 text-left font-semibold">Status</th>
-                    <th className="py-2.5 px-4 text-right font-semibold">Amount ({currency})</th>
+                    <th className="py-2.5 px-4 text-start font-semibold">{t('portal.txColDate')}</th>
+                    <th className="py-2.5 px-4 text-start font-semibold">{t('portal.txColType')}</th>
+                    <th className="py-2.5 px-4 text-start font-semibold">{t('portal.txColRail')}</th>
+                    <th className="py-2.5 px-4 text-start font-semibold">{t('portal.txColStatus')}</th>
+                    <th className="py-2.5 px-4 text-end font-semibold">
+                      {t('portal.txColAmount', { currency })}
+                    </th>
+                    <th className="py-2.5 px-4 text-end font-semibold">{t('portal.txColAction')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -1446,6 +1462,17 @@ export const ClientPortal: React.FC = () => {
                     const st = (tx.status || 'Pending').trim();
                     const isPending = st === 'Pending';
                     const isDeclined = st === 'Declined';
+                    const isCancelled = st === 'Cancelled';
+                    const statusLabel =
+                      st === 'Pending'
+                        ? t('status.Pending')
+                        : st === 'Completed'
+                        ? t('status.Completed')
+                        : st === 'Declined'
+                        ? t('status.Declined')
+                        : st === 'Cancelled'
+                        ? t('status.Cancelled')
+                        : st;
                     const detailEntries = tx.account_details
                       ? Object.entries(tx.account_details).filter(([, val]) => String(val).trim() !== '')
                       : [];
@@ -1489,21 +1516,72 @@ export const ClientPortal: React.FC = () => {
                                 ? 'bg-amber-50 border-amber-300 text-amber-800'
                                 : isDeclined
                                 ? 'bg-rose-50 border-rose-300 text-rose-700'
+                                : isCancelled
+                                ? 'bg-slate-100 border-slate-300 text-slate-700'
                                 : 'bg-emerald-50 border-emerald-300 text-emerald-800'
                             }`}
                           >
                             {isPending ? (
                               <Clock className="w-3 h-3" />
-                            ) : isDeclined ? (
+                            ) : isDeclined || isCancelled ? (
                               <XCircle className="w-3 h-3" />
                             ) : (
                               <CheckCircle2 className="w-3 h-3" />
                             )}
-                            <span>{st}</span>
+                            <span>{statusLabel}</span>
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-[#0D1F3C] tabular-nums whitespace-nowrap">
+                        <td className="py-3 px-4 text-end font-mono font-bold text-[#0D1F3C] tabular-nums whitespace-nowrap">
                           {tx.amount_usd > 0 ? formatMoney(tx.amount_usd) : 'Vault Intake'}
+                        </td>
+                        <td className="py-3 px-4 text-end whitespace-nowrap">
+                          {isPending ? (
+                            confirmCancelTxId === tx.id ? (
+                              <div className="inline-flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  disabled={cancellingTxId === tx.id}
+                                  onClick={async () => {
+                                    setTxCancelError('');
+                                    setCancellingTxId(tx.id);
+                                    const res = await cancelClientTransaction(tx.id);
+                                    setCancellingTxId(null);
+                                    setConfirmCancelTxId(null);
+                                    if (!res.ok) {
+                                      setTxCancelError(res.error || 'Failed to cancel transaction request.');
+                                    }
+                                  }}
+                                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 disabled:opacity-60 text-white rounded text-[11px] font-bold transition-colors"
+                                >
+                                  {cancellingTxId === tx.id
+                                    ? t('portal.cancelling')
+                                    : t('portal.confirmCancel')}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={cancellingTxId === tx.id}
+                                  onClick={() => setConfirmCancelTxId(null)}
+                                  className="px-2 py-1 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded text-[11px] font-semibold"
+                                >
+                                  {t('portal.keepRequest')}
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTxCancelError('');
+                                  setConfirmCancelTxId(tx.id);
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 rounded text-[11px] font-semibold transition-colors"
+                              >
+                                <XCircle className="w-3 h-3" />
+                                <span>{t('portal.cancelRequest')}</span>
+                              </button>
+                            )
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1520,7 +1598,7 @@ export const ClientPortal: React.FC = () => {
         <div className="space-y-6">
           <div className="bg-white border border-slate-200 rounded p-5 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold text-[#0D1F3C]">Security &amp; Account Settings</h2>
+              <h2 className="text-base font-bold text-[#0D1F3C]">{t('portal.securityTitle')}</h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Manage login credentials, verified depository email, and mandatory 6-digit Email OTP protection for {client.vault_id || 'your account'}.
               </p>
@@ -1536,7 +1614,7 @@ export const ClientPortal: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded overflow-hidden flex flex-col">
               <div className="bg-[#0D1F3C] px-5 py-3.5 text-white flex items-center gap-2">
                 <KeyRound className="w-4 h-4 text-[#F2D06B]" />
-                <h3 className="text-sm font-bold">Change Account Password</h3>
+                <h3 className="text-sm font-bold">{t('portal.changePassword')}</h3>
               </div>
               <form
                 autoComplete="on"
@@ -1630,7 +1708,7 @@ export const ClientPortal: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded overflow-hidden flex flex-col">
               <div className="bg-[#0D1F3C] px-5 py-3.5 text-white flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#F2D06B]" />
-                <h3 className="text-sm font-bold">Update Registered Email</h3>
+                <h3 className="text-sm font-bold">{t('portal.updateEmail')}</h3>
               </div>
               <form
                 autoComplete="on"
@@ -1776,7 +1854,7 @@ export const ClientPortal: React.FC = () => {
             <div className="bg-white border border-slate-200 rounded overflow-hidden flex flex-col">
               <div className="bg-[#0A162B] px-5 py-3.5 text-white flex items-center gap-2">
                 <Lock className="w-4 h-4 text-[#F2D06B]" />
-                <h3 className="text-sm font-bold">Two-Factor OTP &amp; Session</h3>
+                <h3 className="text-sm font-bold">{t('portal.twoFactorCard')}</h3>
               </div>
               <div className="p-5 space-y-4 flex-1 flex flex-col justify-between">
                 <div className="space-y-3.5">
@@ -1810,7 +1888,7 @@ export const ClientPortal: React.FC = () => {
                   className="w-full py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs sm:text-sm rounded transition-colors flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out / Log Out Securely</span>
+                  <span>{t('portal.signOutSecure')}</span>
                 </button>
               </div>
             </div>

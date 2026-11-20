@@ -14,6 +14,11 @@ import {
 } from '../data/initialData';
 import { SpotPriceMap, supabase, TROY_OZ_PER_KG } from '../lib/supabase';
 import {
+  formatTransactionEmailAmountText,
+  sendTransactionNotificationEmail,
+} from '../lib/notifications';
+import { isValidLanguageCode, translate, TranslationKey } from '../data/translations';
+import {
   AppView,
   CartItem,
   ClientRow,
@@ -81,6 +86,7 @@ interface BullionContextType {
   setCatalogFilter: (f: MetalType | 'All') => void;
   language: LanguageCode;
   setLanguage: (l: LanguageCode) => void;
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string;
   currency: CurrencyCode;
   setCurrency: (c: CurrencyCode) => void;
   stockLocation: StockLocation;
@@ -160,6 +166,7 @@ interface BullionContextType {
     otpCode: string,
     draft: PendingVaultTransactionDraft
   ) => Promise<{ ok: boolean; error?: string; transaction?: TransactionLogItem }>;
+  cancelClientTransaction: (txId: string) => Promise<{ ok: boolean; error?: string }>;
   executeFunding: (
     action: 'Deposit' | 'Withdraw',
     currencyCode: CurrencyCode,
@@ -295,7 +302,15 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const [view, setView] = useState<AppView>('home');
   const [catalogFilter, setCatalogFilter] = useState<MetalType | 'All'>('All');
-  const [language, setLanguage] = useState<LanguageCode>(savedPrefs.language || 'EN');
+  const [language, setLanguage] = useState<LanguageCode>(() => {
+    try {
+      const explicitLang = localStorage.getItem('bs_language');
+      if (isValidLanguageCode(explicitLang)) return explicitLang;
+    } catch {
+      // ignore
+    }
+    return isValidLanguageCode(savedPrefs.language) ? savedPrefs.language : 'EN';
+  });
   const [currency, setCurrency] = useState<CurrencyCode>(savedPrefs.currency || 'USD');
   const [stockLocation, setStockLocation] = useState<StockLocation>(
     savedPrefs.stockLocation || 'Singapore'
@@ -423,6 +438,21 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       // ignore
     }
   }, [language, currency, stockLocation, cart]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('bs_language', language);
+    } catch {
+      // ignore
+    }
+    if (typeof document !== 'undefined') {
+      document.documentElement.dir = language === 'AR' ? 'rtl' : 'ltr';
+      document.documentElement.lang = language.toLowerCase();
+    }
+  }, [language]);
+
+  const t = (key: TranslationKey, vars?: Record<string, string | number>) =>
+    translate(language, key, vars);
 
   // Subtle realistic spot price drift every 12 seconds when ticker is active
   useEffect(() => {
@@ -1534,6 +1564,25 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
+      // Trigger A: Instant automated transaction submission email (non-blocking)
+      const txRecipientEmail = savedRow.client_email || client.email || targetEmail;
+      const txRecipientName = savedRow.client_name || client.full_name || txRecipientEmail;
+      void sendTransactionNotificationEmail({
+        to: txRecipientEmail,
+        clientName: txRecipientName,
+        txType: savedRow.tx_type || draft.tx_type,
+        assetSummary: savedRow.asset_summary || draft.asset_summary,
+        amountText: formatTransactionEmailAmountText({
+          amountUsd: savedRow.amount_usd,
+          currency: savedRow.currency,
+          assetSummary: savedRow.asset_summary || draft.asset_summary,
+          accountDetails: savedRow.account_details || draft.account_details,
+        }),
+        status: 'Pending',
+        referenceId: savedRow.id,
+        isStatusUpdate: false,
+      });
+
       setTransactions((prev) => [savedRow, ...prev]);
       pushLocalNotification(
         `${draft.tx_type} Submitted (Pending)`,
@@ -1548,6 +1597,53 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       authFlowPendingRef.current = false;
     }
+  };
+
+  const cancelClientTransaction = async (
+    txId: string
+  ): Promise<{ ok: boolean; error?: string }> => {
+    if (!isLoggedIn || isDemoMode) {
+      return { ok: false, error: 'Please sign in with a live account to cancel pending requests.' };
+    }
+    const existing = transactions.find((tx) => tx.id === txId);
+    if (!existing) {
+      return { ok: false, error: 'Transaction record not found.' };
+    }
+    if ((existing.status || 'Pending') !== 'Pending') {
+      return { ok: false, error: 'Only Pending transactions can be cancelled.' };
+    }
+
+    const { data, error } = await supabase
+      .from('vault_transactions')
+      .update({ status: 'Cancelled' })
+      .eq('id', txId)
+      .eq('client_id', client.id)
+      .eq('status', 'Pending')
+      .select('*')
+      .limit(1);
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    const updatedRow = data?.[0]
+      ? normalizeTransactionRow(data[0] as Record<string, unknown>)
+      : { ...existing, status: 'Cancelled' };
+
+    setTransactions((prev) =>
+      prev.map((row) => (row.id === txId ? updatedRow : row))
+    );
+    setAdminTransactions((prev) =>
+      prev.map((row) => (row.id === txId ? updatedRow : row))
+    );
+
+    pushLocalNotification(
+      `${existing.tx_type} Cancelled`,
+      `Request ${existing.id.slice(0, 8)} was cancelled by client.`,
+      'Portfolio'
+    );
+    pushToast('Request Cancelled', `${existing.tx_type} status updated to Cancelled.`);
+    return { ok: true };
   };
 
   // ============================================================================
@@ -1617,6 +1713,9 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? normalizeTransactionRow(data[0] as Record<string, unknown>)
       : null;
 
+    const existingTx = adminTransactions.find((row) => row.id === txId) || null;
+    const targetTx = updatedTx || existingTx;
+
     setAdminTransactions((prev) =>
       prev.map((row) =>
         row.id === txId ? updatedTx || { ...row, status: nextStatus } : row
@@ -1629,6 +1728,25 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
           row.id === txId ? updatedTx || { ...row, status: nextStatus } : row
         )
       );
+    }
+
+    // Trigger B: Automated status-update email when Admin updates status
+    if (targetTx && targetTx.client_email) {
+      void sendTransactionNotificationEmail({
+        to: targetTx.client_email,
+        clientName: targetTx.client_name || targetTx.client_email,
+        txType: targetTx.tx_type,
+        assetSummary: targetTx.asset_summary || targetTx.tx_type,
+        amountText: formatTransactionEmailAmountText({
+          amountUsd: targetTx.amount_usd,
+          currency: targetTx.currency,
+          assetSummary: targetTx.asset_summary,
+          accountDetails: targetTx.account_details,
+        }),
+        status: nextStatus,
+        referenceId: targetTx.id,
+        isStatusUpdate: true,
+      });
     }
 
     pushToast('Status Updated', `Transaction status changed to ${nextStatus}.`);
@@ -1863,6 +1981,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCatalogFilter,
         language,
         setLanguage,
+        t,
         currency,
         setCurrency,
         stockLocation,
@@ -1922,6 +2041,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         totalPortfolioUSD,
         sendTransactionOtp,
         verifyAndSubmitTransaction,
+        cancelClientTransaction,
         executeFunding,
         executeSpotTrade,
         adminAuthenticated,

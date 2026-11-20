@@ -170,11 +170,12 @@ export const AdminPanel: React.FC = () => {
   );
 
   const txCounts = useMemo(() => {
-    const counts = { All: adminTransactions.length, Pending: 0, Completed: 0, Declined: 0 };
+    const counts = { All: adminTransactions.length, Pending: 0, Completed: 0, Declined: 0, Cancelled: 0 };
     adminTransactions.forEach((tx) => {
       if (tx.status === 'Pending') counts.Pending += 1;
       else if (tx.status === 'Completed') counts.Completed += 1;
       else if (tx.status === 'Declined') counts.Declined += 1;
+      else if (tx.status === 'Cancelled') counts.Cancelled += 1;
     });
     return counts;
   }, [adminTransactions]);
@@ -762,7 +763,7 @@ export const AdminPanel: React.FC = () => {
         {/* Filter Bar */}
         <div className="px-5 py-3.5 border-b border-slate-200 bg-[#F8FAFC] flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            {(['All', 'Pending', 'Completed', 'Declined'] as const).map((tab) => {
+            {(['All', 'Pending', 'Completed', 'Declined', 'Cancelled'] as const).map((tab) => {
               const active = txStatusFilter === tab;
               const count = txCounts[tab];
               return (
@@ -1025,6 +1026,12 @@ export const AdminPanel: React.FC = () => {
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-bold bg-rose-50 border-rose-300 text-rose-700">
                           <XCircle className="w-3.5 h-3.5" />
                           <span>Declined</span>
+                        </span>
+                      )}
+                      {tx.status === 'Cancelled' && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-bold bg-slate-100 border-slate-300 text-slate-700">
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Cancelled</span>
                         </span>
                       )}
                     </td>
