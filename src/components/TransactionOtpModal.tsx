@@ -108,7 +108,9 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
               </p>
               <h3 className="font-serif text-lg font-bold">
                 {confirmedTx
-                  ? 'Vault Transaction Submitted'
+                  ? confirmedTx.tx_type === 'Physical Metal Release'
+                    ? 'Physical Precious Metal Release Initiated'
+                    : 'Vault Transaction Submitted'
                   : 'Transaction Security Verification'}
               </h3>
             </div>
@@ -123,82 +125,133 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
           </button>
         </div>
 
-        {confirmedTx ? (
-          <div className="p-6 space-y-5">
-            <div className="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-start gap-3">
-              <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-900 space-y-1">
-                <p className="text-sm font-bold text-amber-950">
-                  Transaction Submitted — Status: Pending Admin &amp; Treasury Review
-                </p>
-                <p className="leading-relaxed">
-                  Your 6-digit email OTP verification succeeded and this request has been logged into the BullionStar treasury ledger for compliance review.
-                </p>
-              </div>
-            </div>
+        {confirmedTx ? (() => {
+          const isPhysicalRelease = confirmedTx.tx_type === 'Physical Metal Release';
+          const details = confirmedTx.account_details || draft.account_details || {};
+          const metalAndQty =
+            details.release_quantity && details.metal_type
+              ? `${details.release_quantity} of ${details.metal_type}`
+              : confirmedTx.asset_summary || draft.asset_summary;
 
-            <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <span className="text-slate-500">Status</span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-amber-900 font-bold">
-                  <Clock className="w-3 h-3" />
-                  <span>{confirmedTx.status}</span>
-                </span>
+          return (
+            <div className="p-6 space-y-5">
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-start gap-3">
+                <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-900 space-y-1.5">
+                  <p className="text-sm font-bold text-amber-950">
+                    {isPhysicalRelease
+                      ? 'Physical Precious Metal Release Initiated'
+                      : 'Transaction Submitted — Status: Pending Admin & Treasury Review'}
+                  </p>
+                  <p className="leading-relaxed">
+                    {isPhysicalRelease ? (
+                      <>
+                        Your physical release request for{' '}
+                        <strong className="text-amber-950">{metalAndQty}</strong> has been submitted
+                        and is currently <strong>Pending</strong> compliance &amp; vault dispatch
+                        clearance. Please check your email inbox (
+                        <strong className="text-amber-950">{client.email}</strong>) for further
+                        notice, armored tracking details, and dispatch confirmation.
+                      </>
+                    ) : (
+                      'Your 6-digit email OTP verification succeeded and this request has been logged into the BullionStar treasury ledger for compliance review.'
+                    )}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Transaction Type</span>
-                <span className="font-bold text-[#0D1F3C]">{confirmedTx.tx_type}</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Asset / Order</span>
-                <span className="font-semibold text-[#0D1F3C] text-right">
-                  {confirmedTx.asset_summary || draft.asset_summary}
-                </span>
-              </div>
-              {confirmedTx.amount_usd > 0 && (
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-slate-500">Equivalent Value</span>
-                  <span className="font-mono font-bold text-[#0D1F3C] tabular-nums">
-                    {formatMoney(confirmedTx.amount_usd)}
+
+              <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-slate-500">Status</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm bg-amber-100 border border-amber-300 text-amber-900 font-bold">
+                    <Clock className="w-3 h-3" />
+                    <span>{confirmedTx.status}</span>
                   </span>
                 </div>
-              )}
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Settlement Rail</span>
-                <span className="font-semibold text-slate-800 text-right">
-                  {confirmedTx.settlement_rail}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-slate-500">Reference ID</span>
-                <span className="font-mono text-[11px] text-slate-600">{confirmedTx.id}</span>
-              </div>
-            </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">Reference ID</span>
+                  <span className="font-mono font-bold text-[#0D1F3C] text-[11px]">
+                    {confirmedTx.id}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">Transaction Type</span>
+                  <span className="font-bold text-[#0D1F3C]">{confirmedTx.tx_type}</span>
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">Asset / Order</span>
+                  <span className="font-semibold text-[#0D1F3C] text-right">
+                    {confirmedTx.asset_summary || draft.asset_summary}
+                  </span>
+                </div>
+                {confirmedTx.amount_usd > 0 && (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-slate-500">Estimated Value</span>
+                    <span className="font-mono font-bold text-[#0D1F3C] tabular-nums">
+                      {formatMoney(confirmedTx.amount_usd)}
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-slate-500">
+                    {isPhysicalRelease ? 'Release Method' : 'Settlement Rail'}
+                  </span>
+                  <span className="font-semibold text-slate-800 text-right">
+                    {confirmedTx.settlement_rail}
+                  </span>
+                </div>
 
-            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2">
-              {onViewTransactions && (
+                {isPhysicalRelease && (
+                  <div className="pt-2.5 mt-2 border-t border-slate-200 space-y-1.5">
+                    <div className="font-bold text-[#0D1F3C]">
+                      Destination Delivery / Recipient Summary
+                    </div>
+                    <div className="text-slate-700 leading-relaxed">
+                      <div className="font-semibold text-[#0D1F3C]">
+                        {details.recipient_name} · {details.phone}
+                      </div>
+                      <div>{details.street_address}</div>
+                      <div>
+                        {[details.city, details.state, details.postal_code]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </div>
+                      <div className="font-semibold">{details.country}</div>
+                      {details.delivery_notes && (
+                        <div className="text-[11px] text-slate-500 mt-1">
+                          Instructions: {details.delivery_notes}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2">
+                {onViewTransactions && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onViewTransactions();
+                    }}
+                    className="px-4 py-2.5 bg-[#0D1F3C] hover:bg-[#193561] text-white text-xs font-bold rounded inline-flex items-center gap-1.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-[#F2D06B]" />
+                    <span>View in Transactions Tab</span>
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={() => {
-                    onClose();
-                    onViewTransactions();
-                  }}
-                  className="px-4 py-2.5 bg-[#0D1F3C] hover:bg-[#193561] text-white text-xs font-bold rounded inline-flex items-center gap-1.5"
+                  onClick={onClose}
+                  className="px-5 py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] text-xs font-bold rounded"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-[#F2D06B]" />
-                  <span>View in Transactions Tab</span>
+                  Done
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] text-xs font-bold rounded"
-              >
-                Done
-              </button>
+              </div>
             </div>
-          </div>
-        ) : (
+          );
+        })() : (
           <form onSubmit={handleVerifySubmit} className="p-6 space-y-4">
             <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 space-y-2 text-xs">
               <div className="flex items-center justify-between gap-3">

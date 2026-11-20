@@ -61,7 +61,8 @@ export interface PendingVaultTransactionDraft {
     | 'Cash Deposit'
     | 'Buy Bullion'
     | 'Sell Bullion'
-    | 'Physical Vault Appointment';
+    | 'Physical Vault Appointment'
+    | 'Physical Metal Release';
   asset_summary: string;
   amount_usd: number;
   currency: string;

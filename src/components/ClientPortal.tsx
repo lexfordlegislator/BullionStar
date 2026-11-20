@@ -18,10 +18,12 @@ import {
   Lock,
   LogOut,
   Mail,
+  MapPin,
   Printer,
   RefreshCw,
   Search,
   ShieldCheck,
+  Truck,
   UserPlus,
   Vault,
   Wallet,
@@ -143,6 +145,25 @@ export const ClientPortal: React.FC = () => {
   const [physError, setPhysError] = useState('');
   const [physBusy, setPhysBusy] = useState(false);
 
+  // Physical Precious Metals Release Modal (Armored Delivery / Vault Release)
+  type ReleaseAssetType = 'Gold Bullion' | 'Silver Bullion' | 'GIA Certified Diamonds';
+  type ReleaseMethodType = 'Insured Armored Delivery' | 'Vault Counter Collection';
+
+  const [releaseModal, setReleaseModal] = useState(false);
+  const [releaseAsset, setReleaseAsset] = useState<ReleaseAssetType>('Gold Bullion');
+  const [releaseQuantity, setReleaseQuantity] = useState('');
+  const [releaseMethod, setReleaseMethod] = useState<ReleaseMethodType>('Insured Armored Delivery');
+  const [relRecipientName, setRelRecipientName] = useState('');
+  const [relPhone, setRelPhone] = useState('');
+  const [relStreet, setRelStreet] = useState('');
+  const [relCity, setRelCity] = useState('');
+  const [relState, setRelState] = useState('');
+  const [relPostal, setRelPostal] = useState('');
+  const [relCountry, setRelCountry] = useState('');
+  const [relNotes, setRelNotes] = useState('');
+  const [relError, setRelError] = useState('');
+  const [relBusy, setRelBusy] = useState(false);
+
   const [txFilter, setTxFilter] = useState('All');
   const [txSearch, setTxSearch] = useState('');
 
@@ -252,13 +273,53 @@ export const ClientPortal: React.FC = () => {
   const activePhotoHolding: VaultHoldingItem | null =
     holdings.find((h) => h.id === selectedPhotoId) || holdings[0] || null;
 
+  const openReleaseModal = () => {
+    const initialAsset: ReleaseAssetType =
+      goldKg > 0
+        ? 'Gold Bullion'
+        : silverKg > 0
+        ? 'Silver Bullion'
+        : diamondCarats > 0
+        ? 'GIA Certified Diamonds'
+        : 'Gold Bullion';
+    const maxQty =
+      initialAsset === 'Gold Bullion'
+        ? goldKg
+        : initialAsset === 'Silver Bullion'
+        ? silverKg
+        : diamondCarats;
+
+    setReleaseAsset(initialAsset);
+    setReleaseQuantity(maxQty > 0 ? String(Number(maxQty.toFixed(3))) : '');
+    setReleaseMethod('Insured Armored Delivery');
+    setRelRecipientName(client.full_name || '');
+    setRelPhone(client.phone || '');
+    setRelStreet('');
+    setRelCity('');
+    setRelState('');
+    setRelPostal('');
+    setRelCountry(client.country || '');
+    setRelNotes('');
+    setRelError('');
+    setReleaseModal(true);
+  };
+
+  const formatDetailKey = (key: string) =>
+    key
+      .replace(/_/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2')
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+
   const filteredTx = transactions.filter((t) => {
     const matchStatus = txFilter === 'All' || t.status === txFilter;
+    const q = txSearch.trim().toLowerCase();
     const matchSearch =
-      !txSearch.trim() ||
-      t.tx_type.toLowerCase().includes(txSearch.toLowerCase()) ||
-      t.status.toLowerCase().includes(txSearch.toLowerCase()) ||
-      t.id.toLowerCase().includes(txSearch.toLowerCase());
+      !q ||
+      t.tx_type.toLowerCase().includes(q) ||
+      (t.asset_summary || '').toLowerCase().includes(q) ||
+      (t.settlement_rail || '').toLowerCase().includes(q) ||
+      t.status.toLowerCase().includes(q) ||
+      t.id.toLowerCase().includes(q);
     return matchStatus && matchSearch;
   });
 
@@ -433,6 +494,13 @@ export const ClientPortal: React.FC = () => {
             >
               <Vault className="w-4 h-4 text-[#F2D06B]" />
               <span>Deposit Physical Gold / Bullion</span>
+            </button>
+            <button
+              onClick={openReleaseModal}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-[#C59B27]/50 rounded text-xs sm:text-sm font-semibold text-[#F2D06B] transition-colors whitespace-nowrap shrink-0"
+            >
+              <Truck className="w-4 h-4 text-[#F2D06B]" />
+              <span>Release Precious Metals</span>
             </button>
             <button
               onClick={() => {
@@ -638,16 +706,25 @@ export const ClientPortal: React.FC = () => {
           {/* Holdings Preview & Alerts */}
           <div className="lg:col-span-7 space-y-6">
             <div className="bg-white border border-slate-200 rounded p-5">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-3">
                 <h2 className="text-base font-bold text-[#0D1F3C]">
                   Allocated Bullion & Certified Diamonds
                 </h2>
-                <button
-                  onClick={() => setActiveTab('holdings')}
-                  className="text-xs font-semibold text-[#0D1F3C] hover:text-[#B38818] underline"
-                >
-                  View Breakdown ({holdings.length})
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={openReleaseModal}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0D1F3C] hover:bg-[#193561] text-[#F2D06B] text-xs font-semibold rounded transition-colors"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Release Precious Metals</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('holdings')}
+                    className="text-xs font-semibold text-[#0D1F3C] hover:text-[#B38818] underline"
+                  >
+                    View Breakdown ({holdings.length})
+                  </button>
+                </div>
               </div>
 
               {holdings.length === 0 ? (
@@ -776,15 +853,24 @@ export const ClientPortal: React.FC = () => {
                 Physical bullion and certified diamonds stored under {client.vault_id}
               </p>
             </div>
-            {holdings.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={downloadBarListCSV}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded text-xs font-semibold text-[#0D1F3C] hover:bg-slate-50"
+                onClick={openReleaseModal}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded text-xs font-bold transition-colors"
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export Holdings CSV</span>
+                <Truck className="w-3.5 h-3.5" />
+                <span>Release Precious Metals</span>
               </button>
-            )}
+              {holdings.length > 0 && (
+                <button
+                  onClick={downloadBarListCSV}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-300 rounded text-xs font-semibold text-[#0D1F3C] hover:bg-slate-50"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export Holdings CSV</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {holdings.length === 0 ? (
@@ -1380,15 +1466,17 @@ export const ClientPortal: React.FC = () => {
                           </div>
                           {detailEntries.length > 0 && (
                             <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
-                              {detailEntries.slice(0, 4).map(([k, v]) => (
+                              {detailEntries.slice(0, 5).map(([k, v]) => (
                                 <div key={k}>
-                                  <span className="font-medium text-slate-600">{k}:</span>{' '}
+                                  <span className="font-medium text-slate-600">
+                                    {formatDetailKey(k)}:
+                                  </span>{' '}
                                   <span className="font-mono">{v}</span>
                                 </div>
                               ))}
-                              {detailEntries.length > 4 && (
+                              {detailEntries.length > 5 && (
                                 <div className="text-[10px] text-slate-400">
-                                  +{detailEntries.length - 4} more submitted detail(s)
+                                  +{detailEntries.length - 5} more submitted detail(s)
                                 </div>
                               )}
                             </div>
@@ -2618,6 +2706,462 @@ export const ClientPortal: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Physical Precious Metals Release Modal (Armored Delivery / Vault Release + Mandatory Address + OTP Gate) */}
+      {releaseModal && (() => {
+        const assetOptions: {
+          id: ReleaseAssetType;
+          label: string;
+          unit: 'kg' | 'ct';
+          available: number;
+          usdTotal: number;
+        }[] = [
+          {
+            id: 'Gold Bullion',
+            label: 'Gold Bullion (LBMA 999.9)',
+            unit: 'kg',
+            available: goldKg,
+            usdTotal: goldValueUSD,
+          },
+          {
+            id: 'Silver Bullion',
+            label: 'Silver Bullion (LBMA 999.0)',
+            unit: 'kg',
+            available: silverKg,
+            usdTotal: silverValueUSD,
+          },
+          {
+            id: 'GIA Certified Diamonds',
+            label: 'GIA Certified Diamonds',
+            unit: 'ct',
+            available: diamondCarats,
+            usdTotal: diamondValueUSD,
+          },
+        ];
+
+        const hasAnyPhysicalHoldings = goldKg > 0 || silverKg > 0 || diamondCarats > 0;
+        const selectedOption =
+          assetOptions.find((a) => a.id === releaseAsset) || assetOptions[0];
+        const qtyNum = Number(releaseQuantity) || 0;
+        const exceedsBalance = qtyNum > selectedOption.available;
+        const estReleaseUSD =
+          selectedOption.available > 0 && qtyNum > 0
+            ? Number(
+                ((Math.min(qtyNum, selectedOption.available) / selectedOption.available) *
+                  selectedOption.usdTotal).toFixed(2)
+              )
+            : 0;
+
+        const courierShort =
+          releaseMethod === 'Insured Armored Delivery'
+            ? 'Armored Courier'
+            : 'Vault Counter Collection';
+
+        const addressComplete =
+          Boolean(relRecipientName.trim()) &&
+          Boolean(relPhone.trim()) &&
+          Boolean(relStreet.trim()) &&
+          Boolean(relCity.trim()) &&
+          Boolean(relState.trim()) &&
+          Boolean(relPostal.trim()) &&
+          Boolean(relCountry.trim());
+
+        const canSubmitRelease =
+          hasAnyPhysicalHoldings &&
+          selectedOption.available > 0 &&
+          qtyNum > 0 &&
+          !exceedsBalance &&
+          addressComplete;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
+            <div className="bg-white border border-slate-200 rounded-md max-w-2xl w-full overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
+              <div className="bg-[#0A162B] text-white px-5 py-4 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <Truck className="w-5 h-5 text-[#F2D06B]" />
+                  <div>
+                    <h3 className="font-serif font-bold text-lg">
+                      Vault Metal Release Request
+                    </h3>
+                    <p className="text-[11px] text-[#F2D06B]">
+                      Physical Allocation Withdrawal · Armored Delivery or Counter Release · 6-Digit Email OTP
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setReleaseModal(false)}
+                  aria-label="Close metal release modal"
+                  className="p-1 hover:bg-white/10 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setRelError('');
+                  if (!hasAnyPhysicalHoldings || selectedOption.available <= 0) {
+                    setRelError(
+                      `You have 0 ${selectedOption.unit} of ${selectedOption.id} available in vault storage.`
+                    );
+                    return;
+                  }
+                  if (qtyNum <= 0) {
+                    setRelError('Enter a valid positive quantity to physically release.');
+                    return;
+                  }
+                  if (exceedsBalance) {
+                    setRelError(
+                      `Requested quantity (${qtyNum} ${selectedOption.unit}) exceeds your stored vault balance (${selectedOption.available} ${selectedOption.unit}).`
+                    );
+                    return;
+                  }
+                  if (!addressComplete) {
+                    setRelError(
+                      'Please fill in all mandatory recipient and physical destination address fields.'
+                    );
+                    return;
+                  }
+
+                  setRelBusy(true);
+                  const otpRes = await sendTransactionOtp();
+                  setRelBusy(false);
+
+                  if (!otpRes.ok) {
+                    setRelError(
+                      otpRes.error || 'Failed to dispatch 6-digit security verification code.'
+                    );
+                    return;
+                  }
+
+                  const formattedQty = `${qtyNum.toLocaleString('en-US', {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 3,
+                  })} ${selectedOption.unit}`;
+
+                  setReleaseModal(false);
+                  setTxOtpDraft({
+                    tx_type: 'Physical Metal Release',
+                    asset_summary: `Physical Release: ${formattedQty} ${selectedOption.id} (${courierShort})`,
+                    amount_usd: estReleaseUSD,
+                    currency: 'USD',
+                    settlement_rail: releaseMethod,
+                    account_details: {
+                      recipient_name: relRecipientName.trim(),
+                      phone: relPhone.trim(),
+                      street_address: relStreet.trim(),
+                      city: relCity.trim(),
+                      state: relState.trim(),
+                      postal_code: relPostal.trim(),
+                      country: relCountry.trim(),
+                      ...(relNotes.trim() ? { delivery_notes: relNotes.trim() } : {}),
+                      metal_type: selectedOption.id,
+                      release_quantity: formattedQty,
+                    },
+                  });
+                }}
+                className="p-5 space-y-5 overflow-y-auto"
+              >
+                {!hasAnyPhysicalHoldings ? (
+                  <div className="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-start gap-3 text-xs text-amber-900">
+                    <AlertCircle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <p className="font-bold text-sm text-amber-950">
+                        No Physical Holdings Available to Release
+                      </p>
+                      <p className="leading-relaxed">
+                        Your depository account ({client.vault_id}) currently holds 0.00 kg Gold, 0.00 kg Silver, and 0.00 ct GIA Diamonds. Purchase or deposit physical bullion into custody before scheduling a physical metal release.
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Step 1: Select Asset, Quantity & Release Method */}
+                <div className="space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#0D1F3C]">
+                      Step 1 · Select Stored Asset &amp; Quantity
+                    </h4>
+                    <span className="text-[11px] font-mono text-slate-500">
+                      Vault {client.vault_id || 'BS-SG'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {assetOptions.map((opt) => {
+                      const active = releaseAsset === opt.id;
+                      const empty = opt.available <= 0;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setReleaseAsset(opt.id);
+                            setReleaseQuantity(
+                              opt.available > 0 ? String(Number(opt.available.toFixed(3))) : ''
+                            );
+                            setRelError('');
+                          }}
+                          className={`p-3 rounded border text-left transition-colors ${
+                            active
+                              ? 'bg-[#0D1F3C] text-white border-[#0D1F3C]'
+                              : empty
+                              ? 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100'
+                              : 'bg-white text-[#0D1F3C] border-slate-300 hover:bg-[#FAFBFD]'
+                          }`}
+                        >
+                          <div className="text-xs font-bold truncate">{opt.id}</div>
+                          <div
+                            className={`text-sm font-mono font-bold tabular-nums mt-1 ${
+                              active ? 'text-[#F2D06B]' : empty ? 'text-slate-400' : 'text-[#0D1F3C]'
+                            }`}
+                          >
+                            {opt.available.toFixed(2)} {opt.unit}
+                          </div>
+                          <div
+                            className={`text-[10px] mt-0.5 ${
+                              active ? 'text-slate-300' : 'text-slate-500'
+                            }`}
+                          >
+                            {empty ? 'No balance held' : formatMoney(opt.usdTotal)}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {selectedOption.available <= 0 && hasAnyPhysicalHoldings && (
+                    <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2.5">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>
+                        You currently hold 0 {selectedOption.unit} of {selectedOption.id}. Select an asset with an active balance above.
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label
+                          htmlFor="release-qty-input"
+                          className="text-xs font-semibold text-slate-700"
+                        >
+                          Quantity to Release ({selectedOption.unit}) *
+                        </label>
+                        {selectedOption.available > 0 && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setReleaseQuantity(String(Number(selectedOption.available.toFixed(3))))
+                            }
+                            className="text-[11px] font-bold text-[#B38818] hover:underline"
+                          >
+                            Max: {selectedOption.available.toFixed(2)} {selectedOption.unit}
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        id="release-qty-input"
+                        type="number"
+                        min="0.001"
+                        step="0.001"
+                        max={selectedOption.available > 0 ? selectedOption.available : undefined}
+                        required
+                        disabled={selectedOption.available <= 0}
+                        value={releaseQuantity}
+                        onChange={(e) => setReleaseQuantity(e.target.value)}
+                        placeholder={`e.g. 1.00 ${selectedOption.unit}`}
+                        className="w-full px-3 py-2 text-sm font-mono font-semibold border border-slate-300 rounded bg-white disabled:bg-slate-100 focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                      {qtyNum > 0 && selectedOption.available > 0 && (
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          Estimated custody release value:{' '}
+                          <span className="font-mono font-bold text-[#0D1F3C]">
+                            {formatMoney(estReleaseUSD)}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="release-method-select"
+                        className="block text-xs font-semibold text-slate-700 mb-1"
+                      >
+                        Release Method *
+                      </label>
+                      <select
+                        id="release-method-select"
+                        value={releaseMethod}
+                        onChange={(e) => setReleaseMethod(e.target.value as ReleaseMethodType)}
+                        className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C] focus:outline-none focus:border-[#0D1F3C]"
+                      >
+                        <option value="Insured Armored Delivery">
+                          Insured Armored Courier Delivery (Brink&apos;s / Loomis / Malca-Amit)
+                        </option>
+                        <option value="Vault Counter Collection">
+                          In-Person Vault Counter Collection
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2: Mandatory Destination Delivery Address Details */}
+                <div className="space-y-3.5 pt-2 border-t border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-[#B38818]" />
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-[#0D1F3C]">
+                      Step 2 · Mandatory Destination Delivery &amp; Recipient Details
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Recipient Full Legal Name *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={relRecipientName}
+                        onChange={(e) => setRelRecipientName(e.target.value)}
+                        placeholder="Matching vault account holder"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Recipient Phone Number (with country code) *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={relPhone}
+                        onChange={(e) => setRelPhone(e.target.value)}
+                        placeholder="e.g. +65 9123 4567"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Street Address / Building &amp; Suite *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={relStreet}
+                        onChange={(e) => setRelStreet(e.target.value)}
+                        placeholder="e.g. 10 Marina Boulevard, Tower 2, Suite 39-01"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        City *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={relCity}
+                        onChange={(e) => setRelCity(e.target.value)}
+                        placeholder="City"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        State / Province *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={relState}
+                        onChange={(e) => setRelState(e.target.value)}
+                        placeholder="State or Province"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Postal / ZIP Code *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={relPostal}
+                        onChange={(e) => setRelPostal(e.target.value)}
+                        placeholder="Postal or ZIP Code"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Destination Country *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={relCountry}
+                        onChange={(e) => setRelCountry(e.target.value)}
+                        placeholder="e.g. Singapore / United States / Switzerland"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                        Preferred Delivery Date / Customs &amp; Armored Security Instructions (Optional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={relNotes}
+                        onChange={(e) => setRelNotes(e.target.value)}
+                        placeholder="Optional preferred delivery window, customs broker details, or building loading-bay clearance notes"
+                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {exceedsBalance && selectedOption.available > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>
+                      Requested release ({qtyNum} {selectedOption.unit}) exceeds your available {selectedOption.id} balance ({selectedOption.available.toFixed(2)} {selectedOption.unit}).
+                    </span>
+                  </div>
+                )}
+
+                {relError && (
+                  <div className="flex items-center gap-2 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span>{relError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={relBusy || !canSubmitRelease}
+                  className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
+                >
+                  {relBusy
+                    ? 'Sending 6-Digit Email OTP...'
+                    : 'Continue to Security Verification'}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Mandatory 6-Digit Email OTP Verification & Confirmation Modal */}
       <TransactionOtpModal

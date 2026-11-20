@@ -15,10 +15,12 @@ import {
   Loader2,
   Lock,
   LogOut,
+  MapPin,
   RefreshCw,
   Search,
   Shield,
   Trash2,
+  Truck,
   Upload,
   Users,
   XCircle,
@@ -115,6 +117,7 @@ export const AdminPanel: React.FC = () => {
 
   // Client Transactions & Orders Regulation state
   const [txStatusFilter, setTxStatusFilter] = useState<'All' | VaultTransactionStatus>('All');
+  const [txTypeFilter, setTxTypeFilter] = useState<string>('All');
   const [txSearchTerm, setTxSearchTerm] = useState('');
   const [updatingTxId, setUpdatingTxId] = useState<string | null>(null);
   const [txActionErrors, setTxActionErrors] = useState<Record<string, string>>({});
@@ -180,6 +183,7 @@ export const AdminPanel: React.FC = () => {
     const q = txSearchTerm.trim().toLowerCase();
     return adminTransactions.filter((tx) => {
       if (txStatusFilter !== 'All' && tx.status !== txStatusFilter) return false;
+      if (txTypeFilter !== 'All' && tx.tx_type !== txTypeFilter) return false;
       if (!q) return true;
       const detailsText = tx.account_details
         ? Object.entries(tx.account_details)
@@ -198,7 +202,7 @@ export const AdminPanel: React.FC = () => {
         detailsText.includes(q)
       );
     });
-  }, [adminTransactions, txStatusFilter, txSearchTerm]);
+  }, [adminTransactions, txStatusFilter, txTypeFilter, txSearchTerm]);
 
   const handleUpdateTransactionStatus = async (
     tx: TransactionLogItem,
@@ -785,15 +789,32 @@ export const AdminPanel: React.FC = () => {
             })}
           </div>
 
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={txSearchTerm}
-              onChange={(e) => setTxSearchTerm(e.target.value)}
-              placeholder="Search client, rail, IBAN, wallet, asset..."
-              className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded w-72 bg-white focus:outline-none focus:border-[#0D1F3C]"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={txTypeFilter}
+              onChange={(e) => setTxTypeFilter(e.target.value)}
+              aria-label="Filter by transaction type"
+              className="px-2.5 py-1.5 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C] focus:outline-none focus:border-[#0D1F3C]"
+            >
+              <option value="All">All Operation Types</option>
+              <option value="Physical Metal Release">Physical Metal Release</option>
+              <option value="Cash Deposit">Cash Deposit</option>
+              <option value="Cash Withdrawal">Cash Withdrawal</option>
+              <option value="Buy Bullion">Buy Bullion</option>
+              <option value="Sell Bullion">Sell Bullion</option>
+              <option value="Physical Vault Appointment">Physical Vault Appointment</option>
+            </select>
+
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={txSearchTerm}
+                onChange={(e) => setTxSearchTerm(e.target.value)}
+                placeholder="Search client, address, rail, IBAN..."
+                className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded w-64 sm:w-72 bg-white focus:outline-none focus:border-[#0D1F3C]"
+              />
+            </div>
           </div>
         </div>
 
@@ -878,9 +899,16 @@ export const AdminPanel: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-3 min-w-[210px]">
-                      <span className="inline-block px-2 py-0.5 text-[11px] font-bold bg-[#0D1F3C]/5 text-[#0D1F3C] border border-[#0D1F3C]/15 rounded">
-                        {tx.tx_type}
-                      </span>
+                      {tx.tx_type === 'Physical Metal Release' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold bg-[#0D1F3C] text-[#F2D06B] border border-[#C59B27]/50 rounded">
+                          <Truck className="w-3 h-3" />
+                          <span>{tx.tx_type}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-block px-2 py-0.5 text-[11px] font-bold bg-[#0D1F3C]/5 text-[#0D1F3C] border border-[#0D1F3C]/15 rounded">
+                          {tx.tx_type}
+                        </span>
+                      )}
                       <div className="font-semibold text-[#0D1F3C] mt-1.5 leading-snug">
                         {tx.asset_summary || '—'}
                       </div>
@@ -899,11 +927,68 @@ export const AdminPanel: React.FC = () => {
                       </div>
                     </td>
 
-                    <td className="py-3.5 px-3 min-w-[290px] max-w-[380px]">
-                      <div className="font-bold text-[#0D1F3C] mb-1.5">
-                        {tx.settlement_rail || 'Treasury Settlement'}
+                    <td className="py-3.5 px-3 min-w-[290px] max-w-[400px]">
+                      <div className="font-bold text-[#0D1F3C] mb-1.5 flex items-center gap-1.5">
+                        {tx.tx_type === 'Physical Metal Release' && (
+                          <MapPin className="w-3.5 h-3.5 text-[#B38818] shrink-0" />
+                        )}
+                        <span>{tx.settlement_rail || 'Treasury Settlement'}</span>
                       </div>
-                      {accountEntries.length > 0 ? (
+                      {tx.tx_type === 'Physical Metal Release' && tx.account_details ? (
+                        <div className="bg-[#FAF7EC] border border-[#C59B27]/40 rounded p-2.5 space-y-1.5 text-[11px]">
+                          <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-[#C59B27]/25">
+                            <span className="font-semibold text-[#9A720F]">Release Allocation:</span>
+                            <span className="font-mono font-bold text-[#0D1F3C]">
+                              {tx.account_details.release_quantity || '—'} ·{' '}
+                              {tx.account_details.metal_type || 'Precious Metal'}
+                            </span>
+                          </div>
+                          <div className="text-[#0D1F3C] space-y-0.5 leading-relaxed">
+                            <div>
+                              <span className="text-slate-500">Recipient:</span>{' '}
+                              <span className="font-bold">
+                                {tx.account_details.recipient_name || '—'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Phone:</span>{' '}
+                              <span className="font-mono font-semibold">
+                                {tx.account_details.phone || '—'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Street:</span>{' '}
+                              <span className="font-medium">
+                                {tx.account_details.street_address || '—'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">City / State / ZIP:</span>{' '}
+                              <span className="font-medium">
+                                {[
+                                  tx.account_details.city,
+                                  tx.account_details.state,
+                                  tx.account_details.postal_code,
+                                ]
+                                  .filter(Boolean)
+                                  .join(', ') || '—'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-500">Country:</span>{' '}
+                              <span className="font-bold">
+                                {tx.account_details.country || '—'}
+                              </span>
+                            </div>
+                            {tx.account_details.delivery_notes && (
+                              <div className="pt-1 text-slate-600">
+                                <span className="text-slate-500">Instructions:</span>{' '}
+                                {tx.account_details.delivery_notes}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : accountEntries.length > 0 ? (
                         <div className="bg-[#F8FAFC] border border-slate-200 rounded p-2.5 space-y-1 text-[11px]">
                           {accountEntries.map(([key, val]) => (
                             <div key={key} className="flex items-start justify-between gap-3">
