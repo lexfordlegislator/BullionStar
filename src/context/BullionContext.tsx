@@ -37,6 +37,7 @@ import {
   VaultTransactionStatus,
 } from '../types/bullion';
 import { generateVaultVerificationPhoto } from '../utils/vaultPhotoGenerator';
+import { collectLoginSessionMetadata } from '../utils/sessionMetadata';
 
 interface ToastMessage {
   id: string;
@@ -800,7 +801,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return error ? { ok: false, error: error.message } : { ok: true };
   };
 
-  // Sign In Step 1 & 2: Verify password, immediately sign out, and dispatch mandatory 6-digit Email OTP
+  // Sign In Step 1 & 2: Verify password, save session metadata, sign out, and dispatch 6-digit Email OTP
   const startLoginWithPassword = async (email: string, password: string) => {
     const cleanEmail = email.trim().toLowerCase();
     authFlowPendingRef.current = true;
@@ -817,12 +818,30 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return { ok: false, error: 'Unable to verify credentials.' };
       }
 
+      // Detect real Device/OS, IP-based City & Country (2s timeout + timezone fallback), and timestamp
+      const { device, location, loginTime } = await collectLoginSessionMetadata();
+      const sessionMeta = {
+        last_device: device,
+        last_location: location,
+        last_login_time: loginTime,
+      };
+
+      // Save session details into user_metadata while the password session is active
+      try {
+        await supabase.auth.updateUser({ data: sessionMeta });
+      } catch {
+        // Non-blocking: options.data below also carries the session metadata to signInWithOtp
+      }
+
       // Step 2: Sign out immediately so no dashboard access is granted prior to Email OTP
       await supabase.auth.signOut();
 
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email: cleanEmail,
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          data: sessionMeta,
+        },
       });
 
       if (otpError) {
@@ -874,9 +893,17 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const resendLoginOtp = async (email: string) => {
     const cleanEmail = email.trim().toLowerCase();
+    const { device, location, loginTime } = await collectLoginSessionMetadata();
     const { error } = await supabase.auth.signInWithOtp({
       email: cleanEmail,
-      options: { shouldCreateUser: false },
+      options: {
+        shouldCreateUser: false,
+        data: {
+          last_device: device,
+          last_location: location,
+          last_login_time: loginTime,
+        },
+      },
     });
     return error ? { ok: false, error: error.message } : { ok: true };
   };
@@ -1464,9 +1491,17 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!targetEmail) {
       return { ok: false, error: 'No verified account email found for OTP delivery.' };
     }
+    const { device, location, loginTime } = await collectLoginSessionMetadata();
     const { error } = await supabase.auth.signInWithOtp({
       email: targetEmail,
-      options: { shouldCreateUser: false },
+      options: {
+        shouldCreateUser: false,
+        data: {
+          last_device: device,
+          last_location: location,
+          last_login_time: loginTime,
+        },
+      },
     });
     if (error) {
       return { ok: false, error: error.message };
