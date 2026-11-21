@@ -1599,11 +1599,13 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      // Trigger A: Instant automated transaction submission email (non-blocking)
-      const txRecipientEmail = savedRow.client_email || client.email || targetEmail;
-      const txRecipientName = savedRow.client_name || client.full_name || txRecipientEmail;
-      void sendTransactionNotificationEmail({
-        to: txRecipientEmail,
+      // Trigger A: Await automated transaction submission email immediately after DB insert
+      const { data: authUserResult } = await supabase.auth.getUser();
+      const currentUserEmail =
+        authUserResult?.user?.email || targetEmail || client.email || savedRow.client_email || '';
+      const txRecipientName = client.full_name || savedRow.client_name || currentUserEmail;
+      await sendTransactionNotificationEmail({
+        to: currentUserEmail,
         clientName: txRecipientName,
         txType: savedRow.tx_type || draft.tx_type,
         assetSummary: savedRow.asset_summary || draft.asset_summary,
@@ -1765,19 +1767,38 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       );
     }
 
-    // Trigger B: Automated status-update email when Admin updates status
-    if (targetTx && targetTx.client_email) {
-      void sendTransactionNotificationEmail({
-        to: targetTx.client_email,
-        clientName: targetTx.client_name || targetTx.client_email,
+    // Trigger B: Await automated status-update email when Admin updates status
+    if (targetTx) {
+      const matchedAdminClient = adminClients.find(
+        (c) =>
+          (targetTx.client_id && c.id === targetTx.client_id) ||
+          (targetTx.vault_id && c.vault_id === targetTx.vault_id)
+      );
+      const adminRecipientEmail =
+        (targetTx.client_email || '').trim() || (matchedAdminClient?.email || '').trim();
+      const adminRecipientName =
+        (targetTx.client_name || '').trim() ||
+        (matchedAdminClient?.full_name || '').trim() ||
+        adminRecipientEmail;
+      const adminAmountText =
+        Number(targetTx.amount_usd) > 0
+          ? `$${Number(targetTx.amount_usd).toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })} ${targetTx.currency || 'USD'}`
+          : formatTransactionEmailAmountText({
+              amountUsd: targetTx.amount_usd,
+              currency: targetTx.currency,
+              assetSummary: targetTx.asset_summary,
+              accountDetails: targetTx.account_details,
+            });
+
+      await sendTransactionNotificationEmail({
+        to: adminRecipientEmail,
+        clientName: adminRecipientName,
         txType: targetTx.tx_type,
         assetSummary: targetTx.asset_summary || targetTx.tx_type,
-        amountText: formatTransactionEmailAmountText({
-          amountUsd: targetTx.amount_usd,
-          currency: targetTx.currency,
-          assetSummary: targetTx.asset_summary,
-          accountDetails: targetTx.account_details,
-        }),
+        amountText: adminAmountText,
         status: nextStatus,
         referenceId: targetTx.id,
         isStatusUpdate: true,

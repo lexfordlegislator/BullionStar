@@ -53,34 +53,49 @@ export const sendTransactionNotificationEmail = async ({
   status,
   referenceId,
   isStatusUpdate,
-}: SendTransactionNotificationEmailParams): Promise<{ ok: boolean; error?: string }> => {
+}: SendTransactionNotificationEmailParams): Promise<{ ok: boolean; data?: unknown; error?: string }> => {
   const cleanTo = (to || '').trim();
   if (!cleanTo) {
+    console.log('[send-transaction-email] Skipped: missing recipient email address.', {
+      txType,
+      status,
+      referenceId,
+      isStatusUpdate,
+    });
     return { ok: false, error: 'Missing recipient email address.' };
   }
 
+  const payload = {
+    to: cleanTo,
+    clientName: (clientName || '').trim() || cleanTo,
+    txType,
+    assetSummary,
+    amountText,
+    status,
+    referenceId,
+    isStatusUpdate,
+  };
+
   try {
-    const { error } = await supabase.functions.invoke('send-transaction-email', {
-      body: {
-        to: cleanTo,
-        clientName: (clientName || '').trim() || cleanTo,
-        txType,
-        assetSummary,
-        amountText,
-        status,
-        referenceId,
-        isStatusUpdate,
-      },
+    console.log('[send-transaction-email] Invoking Edge Function with payload:', payload);
+    const { data, error } = await supabase.functions.invoke('send-transaction-email', {
+      body: payload,
     });
 
     if (error) {
+      console.log('[send-transaction-email] Edge Function returned error:', error);
       return { ok: false, error: error.message };
     }
-    return { ok: true };
+
+    console.log('[send-transaction-email] Edge Function response:', data);
+    return { ok: true, data };
   } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Unable to send transaction notification email.';
+    console.log('[send-transaction-email] Invocation exception:', message, err);
     return {
       ok: false,
-      error: err instanceof Error ? err.message : 'Unable to send transaction notification email.',
+      error: message,
     };
   }
 };
