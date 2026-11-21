@@ -91,9 +91,9 @@ export const ContactSection: React.FC = () => {
   return (
     <section
       id="contact-section"
-      className="scroll-mt-40 bg-[#F4F6F9] border-t border-slate-200 py-14 no-print"
+      className="scroll-mt-40 bg-[#F4F6F9] border-t border-slate-200 py-10 sm:py-14 no-print"
     >
-      <div className="max-w-[1360px] mx-auto px-4 lg:px-6">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="max-w-2xl mb-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-[#B38818] mb-2">
             {t('contact.kicker')}
@@ -106,7 +106,7 @@ export const ContactSection: React.FC = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Left Panel: Luxury Navy Contact Directory */}
-          <div className="lg:col-span-5 bg-[#0A162B] text-white rounded-md border border-[#1D3A68] p-6 sm:p-8 flex flex-col justify-between">
+          <div className="lg:col-span-5 bg-[#0A162B] text-white rounded-md border border-[#1D3A68] p-5 sm:p-8 flex flex-col justify-between">
             <div className="space-y-6">
               <div>
                 <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#F2D06B] mb-2">
@@ -194,7 +194,7 @@ export const ContactSection: React.FC = () => {
           </div>
 
           {/* Right Panel: Interactive Send an Inquiry Form */}
-          <div className="lg:col-span-7 bg-white rounded-md border border-slate-200 p-6 sm:p-8 shadow-xs">
+          <div className="lg:col-span-7 bg-white rounded-md border border-slate-200 p-5 sm:p-8 shadow-xs">
             <div className="border-b border-slate-100 pb-4 mb-5 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <h3 className="font-serif text-xl font-bold text-[#0D1F3C]">
@@ -238,14 +238,14 @@ export const ContactSection: React.FC = () => {
                   <label htmlFor="contact-name" className="block text-xs font-semibold text-slate-700 mb-1">
                     {t('contact.fieldName')} <span className="text-rose-600">*</span>
                   </label>
-                  <input
+                    <input
                     id="contact-name"
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Sophia Lim Hui Ling"
-                    className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3.5 py-2.5 text-base sm:text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
                   />
                 </div>
 
@@ -260,7 +260,7 @@ export const ContactSection: React.FC = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3.5 py-2.5 text-base sm:text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
                   />
                 </div>
               </div>
@@ -277,7 +277,7 @@ export const ContactSection: React.FC = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+65 9123 4567"
-                    className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3.5 py-2.5 text-base sm:text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
                   />
                 </div>
 
@@ -289,7 +289,7 @@ export const ContactSection: React.FC = () => {
                     id="contact-topic"
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
-                    className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3.5 py-2.5 text-base sm:text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C]"
                   >
                     {INQUIRY_TOPICS.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -311,16 +311,16 @@ export const ContactSection: React.FC = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder={t('contact.messagePlaceholder')}
-                  className="w-full px-3.5 py-2.5 text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C] resize-y"
+                  className="w-full px-3.5 py-2.5 text-base sm:text-sm border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-[#0D1F3C] resize-y"
                 />
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                 <p className="text-[11px] text-slate-500">{t('contact.confidentialNote')}</p>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors whitespace-nowrap shrink-0"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-60 text-[#0A162B] font-bold text-sm rounded transition-colors whitespace-nowrap shrink-0"
                 >
                   {submitting ? (
                     <>

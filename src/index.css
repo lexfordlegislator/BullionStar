@@ -7,14 +7,32 @@
 }
 
 @layer base {
-  html {
+  html,
+  body {
     font-family: var(--font-sans);
     scroll-behavior: smooth;
+    overflow-x: hidden;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  #root {
+    max-width: 100%;
+    overflow-x: clip;
   }
 
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 @media print {

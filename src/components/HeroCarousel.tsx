@@ -83,39 +83,39 @@ export const HeroCarousel: React.FC = () => {
 
   return (
     <section className="bg-white border-b border-slate-200">
-      <div className="max-w-[1360px] mx-auto px-4 lg:px-6 pt-5 pb-6">
-        <div className="relative rounded-md overflow-hidden border border-slate-200 bg-[#0D1F3C] min-h-[380px] lg:h-[430px] flex items-center">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5 pb-6">
+        <div className="relative rounded-md overflow-hidden border border-slate-200 bg-[#0D1F3C] min-h-[390px] lg:h-[430px] flex items-center">
           <div className="absolute inset-0">
             <ResilientImage
               src={current.image}
               alt={current.title}
               className="w-full h-full object-cover transition-opacity duration-500"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#091529]/95 via-[#0D1F3C]/80 to-[#0D1F3C]/25" />
+            <div className="absolute inset-0 bg-gradient-to-b sm:bg-gradient-to-r from-[#091529]/95 via-[#0D1F3C]/85 to-[#0D1F3C]/40 sm:to-[#0D1F3C]/25" />
           </div>
 
-          <div className="relative z-10 max-w-2xl px-6 sm:px-10 lg:px-14 py-10">
-            <p className="text-xs sm:text-sm font-medium text-[#F2D06B] tracking-wide mb-3">
+          <div className="relative z-10 w-full max-w-2xl px-5 sm:px-10 lg:px-14 pt-10 pb-14 sm:py-16 text-center sm:text-left">
+            <p className="text-xs sm:text-sm font-medium text-[#F2D06B] tracking-wide mb-2.5 sm:mb-3">
               {current.kicker}
             </p>
-            <h1 className="font-serif text-2xl sm:text-4xl font-bold text-white leading-tight [text-wrap:balance] mb-4">
+            <h1 className="font-serif text-3xl sm:text-5xl font-bold text-white leading-tight [text-wrap:balance] mb-3 sm:mb-4">
               {current.title}
             </h1>
-            <p className="text-sm sm:text-base text-slate-200 leading-relaxed mb-7 max-w-xl">
+            <p className="text-sm sm:text-base text-slate-200 leading-relaxed mb-6 sm:mb-7 max-w-xl mx-auto sm:mx-0">
               {current.subtitle}
             </p>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-3">
               <button
                 onClick={current.onCta}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-semibold text-sm rounded transition-colors whitespace-nowrap shrink-0"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-semibold text-sm rounded transition-colors whitespace-nowrap shrink-0"
               >
                 <span>{current.ctaLabel}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
                 onClick={current.onSecondary}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white border border-white/25 font-medium text-sm rounded transition-colors whitespace-nowrap shrink-0"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 min-h-[44px] bg-white/10 hover:bg-white/20 text-white border border-white/25 font-medium text-sm rounded transition-colors whitespace-nowrap shrink-0"
               >
                 <Lock className="w-3.5 h-3.5 text-[#F2D06B]" />
                 <span>{current.secondaryLabel}</span>
@@ -140,7 +140,7 @@ export const HeroCarousel: React.FC = () => {
           </button>
 
           {/* Slide Dots */}
-          <div className="absolute bottom-4 right-6 flex items-center gap-2 z-10">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:right-6 flex items-center gap-2 z-10">
             {slides.map((s, idx) => (
               <button
                 key={s.id}

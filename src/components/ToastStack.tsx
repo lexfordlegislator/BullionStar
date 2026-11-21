@@ -8,7 +8,7 @@ export const ToastStack: React.FC = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-2 max-w-sm w-full pointer-events-none no-print">
+    <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-4 z-50 space-y-2 sm:max-w-sm sm:w-full pointer-events-none no-print">
       {toasts.map((t) => {
         const isSuccess = t.variant === 'success';
         return (

@@ -23,10 +23,10 @@ const BullionStarShell: React.FC = () => {
   const [selectedMetalChart, setSelectedMetalChart] = useState<'Gold' | 'Silver' | 'Platinum' | 'Palladium'>('Gold');
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F6F9] text-slate-900">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip flex flex-col bg-[#F4F6F9] text-slate-900">
       <Header onSelectMetalChart={setSelectedMetalChart} />
 
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full">
         {view === 'home' && (
           <>
             <HeroCarousel />

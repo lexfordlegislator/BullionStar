@@ -98,10 +98,10 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-slate-900/75 flex items-center justify-center p-4 no-print">
-      <div className="bg-white border border-slate-200 rounded-md max-w-lg w-full overflow-hidden shadow-2xl max-h-[94vh] overflow-y-auto">
-        <div className="bg-[#0A162B] px-6 py-4 text-white flex items-start justify-between gap-4">
-          <div className="space-y-2">
+    <div className="fixed inset-0 z-[60] bg-slate-900/75 flex items-center justify-center p-3 sm:p-4 no-print">
+      <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-lg overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-[#0A162B] px-5 sm:px-6 py-4 text-white flex items-start justify-between gap-3 sticky top-0 z-10">
+          <div className="space-y-2 min-w-0">
             <BullionStarLogo variant="dark" size="sm" />
             <div className="flex items-center gap-2 pt-0.5">
               <ShieldCheck className="w-4 h-4 text-[#F2D06B] shrink-0" />
@@ -133,10 +133,10 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
               : confirmedTx.asset_summary || draft.asset_summary;
 
           return (
-            <div className="p-6 space-y-5">
+            <div className="p-4 sm:p-6 space-y-5">
               <div className="bg-amber-50 border border-amber-200 rounded-md p-4 flex items-start gap-3">
                 <Clock className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-                <div className="text-xs text-amber-900 space-y-1.5">
+                <div className="text-xs text-amber-900 space-y-1.5 min-w-0">
                   <p className="text-sm font-bold text-amber-950">
                     {isPhysicalRelease
                       ? 'Physical Precious Metal Release Initiated'
@@ -149,7 +149,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                         <strong className="text-amber-950">{metalAndQty}</strong> has been submitted
                         and is currently <strong>Pending</strong> compliance &amp; vault dispatch
                         clearance. Please check your email inbox (
-                        <strong className="text-amber-950">{client.email}</strong>) for further
+                        <strong className="text-amber-950 break-all">{client.email}</strong>) for further
                         notice, armored tracking details, and dispatch confirmation.
                       </>
                     ) : (
@@ -168,18 +168,18 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-slate-500">Reference ID</span>
-                  <span className="font-mono font-bold text-[#0D1F3C] text-[11px]">
+                  <span className="text-slate-500 shrink-0">Reference ID</span>
+                  <span className="font-mono font-bold text-[#0D1F3C] text-[11px] break-all text-right">
                     {confirmedTx.id}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-slate-500">Transaction Type</span>
-                  <span className="font-bold text-[#0D1F3C]">{confirmedTx.tx_type}</span>
+                  <span className="text-slate-500 shrink-0">Transaction Type</span>
+                  <span className="font-bold text-[#0D1F3C] text-right">{confirmedTx.tx_type}</span>
                 </div>
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-slate-500">Asset / Order</span>
-                  <span className="font-semibold text-[#0D1F3C] text-right">
+                  <span className="text-slate-500 shrink-0">Asset / Order</span>
+                  <span className="font-semibold text-[#0D1F3C] text-right break-words min-w-0">
                     {confirmedTx.asset_summary || draft.asset_summary}
                   </span>
                 </div>
@@ -226,7 +226,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-2.5 pt-2">
+              <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-end gap-2.5 pt-2">
                 {onViewTransactions && (
                   <button
                     type="button"
@@ -234,7 +234,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                       onClose();
                       onViewTransactions();
                     }}
-                    className="px-4 py-2.5 bg-[#0D1F3C] hover:bg-[#193561] text-white text-xs font-bold rounded inline-flex items-center gap-1.5"
+                    className="w-full sm:w-auto px-4 py-2.5 min-h-[44px] bg-[#0D1F3C] hover:bg-[#193561] text-white text-xs font-bold rounded inline-flex items-center justify-center gap-1.5"
                   >
                     <CheckCircle2 className="w-4 h-4 text-[#F2D06B]" />
                     <span>View in Transactions Tab</span>
@@ -243,7 +243,7 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] text-xs font-bold rounded"
+                  className="w-full sm:w-auto px-5 py-2.5 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] text-xs font-bold rounded"
                 >
                   {t('common.done')}
                 </button>
@@ -251,27 +251,27 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
             </div>
           );
         })() : (
-          <form onSubmit={handleVerifySubmit} className="p-6 space-y-4">
+          <form onSubmit={handleVerifySubmit} className="p-4 sm:p-6 space-y-4">
             <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 space-y-2 text-xs">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-500">Operation</span>
-                <span className="font-bold text-[#0D1F3C]">{draft.tx_type}</span>
+                <span className="text-slate-500 shrink-0">Operation</span>
+                <span className="font-bold text-[#0D1F3C] text-right">{draft.tx_type}</span>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-500">Details</span>
-                <span className="font-semibold text-[#0D1F3C] text-right">{draft.asset_summary}</span>
+                <span className="text-slate-500 shrink-0">Details</span>
+                <span className="font-semibold text-[#0D1F3C] text-right break-words min-w-0">{draft.asset_summary}</span>
               </div>
               {draft.amount_usd > 0 && (
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-slate-500">Amount (USD Eq.)</span>
+                  <span className="text-slate-500 shrink-0">Amount (USD Eq.)</span>
                   <span className="font-mono font-bold text-[#0D1F3C] tabular-nums">
                     {formatMoney(draft.amount_usd)}
                   </span>
                 </div>
               )}
               <div className="flex items-center justify-between gap-3">
-                <span className="text-slate-500">Settlement Rail</span>
-                <span className="font-semibold text-slate-800 text-right">
+                <span className="text-slate-500 shrink-0">Settlement Rail</span>
+                <span className="font-semibold text-slate-800 text-right break-words min-w-0">
                   {draft.settlement_rail}
                 </span>
               </div>
@@ -279,11 +279,11 @@ export const TransactionOtpModal: React.FC<TransactionOtpModalProps> = ({
 
             <div className="bg-white border border-slate-200 rounded p-3.5 flex items-start gap-3">
               <MailCheck className="w-5 h-5 text-[#B38818] shrink-0 mt-0.5" />
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-slate-700 leading-relaxed min-w-0">
                 <p className="font-bold text-[#0D1F3C]">Mandatory 6-Digit Email One-Time Passcode</p>
                 <p className="mt-0.5">
                   Enter the 6-digit security code sent to{' '}
-                  <strong className="text-[#0D1F3C]">{client.email}</strong>.
+                  <strong className="text-[#0D1F3C] break-all">{client.email}</strong>.
                 </p>
               </div>
             </div>

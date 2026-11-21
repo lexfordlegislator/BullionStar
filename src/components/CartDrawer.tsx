@@ -294,7 +294,7 @@ export const CartDrawer: React.FC = () => {
                     <select
                       value={paymentMethod}
                       onChange={(e) => handlePaymentMethodChange(e.target.value as BuyPaymentMethod)}
-                      className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C] focus:outline-none focus:border-[#0D1F3C]"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C] focus:outline-none focus:border-[#0D1F3C]"
                     >
                       {BUY_PAYMENT_METHODS.map((m) => (
                         <option key={m} value={m}>
@@ -357,7 +357,7 @@ export const CartDrawer: React.FC = () => {
                                     [field.key]: e.target.value,
                                   }))
                                 }
-                                className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
+                                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded bg-white"
                               >
                                 {field.options.map((opt) => (
                                   <option key={opt} value={opt}>
@@ -377,7 +377,7 @@ export const CartDrawer: React.FC = () => {
                                   }))
                                 }
                                 placeholder={field.placeholder}
-                                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                               />
                             )}
                           </div>
@@ -394,11 +394,11 @@ export const CartDrawer: React.FC = () => {
                   )}
                 </div>
 
-                <div className="p-5 border-t border-slate-200 bg-[#F8FAFC] space-y-2.5">
+                <div className="p-4 sm:p-5 border-t border-slate-200 bg-[#F8FAFC] space-y-2.5">
                   <button
                     type="submit"
                     disabled={sendingOtp || !isSettlementValid}
-                    className="w-full py-3 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-xs sm:text-sm rounded transition-colors"
+                    className="w-full py-3 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-xs sm:text-sm rounded transition-colors"
                   >
                     {sendingOtp ? t('common.sending') : t('cart.continueSecurity')}
                   </button>

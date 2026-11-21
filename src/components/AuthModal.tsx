@@ -349,10 +349,10 @@ export const AuthModal: React.FC = () => {
       : t('auth.titleSignIn');
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
-      <div className="bg-white border border-slate-200 rounded-md max-w-md w-full overflow-hidden shadow-2xl max-h-[94vh] overflow-y-auto">
-        <div className="bg-[#0D1F3C] px-6 py-4 text-white flex items-start justify-between gap-4">
-          <div className="space-y-2">
+    <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-3 sm:p-4 no-print">
+      <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-md overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div className="bg-[#0D1F3C] px-5 sm:px-6 py-4 text-white flex items-start justify-between gap-3 sticky top-0 z-10">
+          <div className="space-y-2 min-w-0">
             <BullionStarLogo variant="dark" size="sm" />
             <h2 className="font-serif text-lg sm:text-xl font-bold leading-snug">{headerTitle}</h2>
           </div>
@@ -405,7 +405,7 @@ export const AuthModal: React.FC = () => {
 
         {/* STEP A: Primary Sign In / Create Account Form */}
         {step === 'form' && (
-          <form onSubmit={handlePrimarySubmit} autoComplete="on" className="p-6 space-y-3.5">
+          <form onSubmit={handlePrimarySubmit} autoComplete="on" className="p-5 sm:p-6 space-y-3.5">
             {mode === 'signup' && (
               <div>
                 <label htmlFor="auth-full-name" className="block text-xs font-semibold text-slate-700 mb-1">
@@ -420,7 +420,7 @@ export const AuthModal: React.FC = () => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. Sophia Lim Hui Ling"
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                  className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                 />
               </div>
             )}
@@ -438,7 +438,7 @@ export const AuthModal: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@company.com"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
               />
             </div>
 
@@ -454,7 +454,7 @@ export const AuthModal: React.FC = () => {
                     autoComplete="country-name"
                     value={country}
                     onChange={(e) => handleCountryChange(e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
                   >
                     {COUNTRY_DIAL_LIST.map((c) => (
                       <option key={c.name} value={c.name}>
@@ -495,7 +495,7 @@ export const AuthModal: React.FC = () => {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder={selectedDialInfo.placeholder}
-                      className="w-full px-3 py-2 text-sm focus:outline-none bg-white"
+                      className="w-full min-w-0 px-3 py-2.5 sm:py-2 text-base sm:text-sm focus:outline-none bg-white"
                     />
                   </div>
                 </div>
@@ -516,7 +516,7 @@ export const AuthModal: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={mode === 'signup' ? 'Minimum 6 characters' : 'Enter your password'}
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
               />
               {mode === 'signin' && (
                 <div className="mt-1.5 flex justify-end">
@@ -584,16 +584,16 @@ export const AuthModal: React.FC = () => {
 
         {/* STEP B: 6-Digit Email OTP Verification Screen (Sign Up & Sign In) */}
         {(step === 'signup-otp' || step === 'signin-otp') && (
-          <form onSubmit={handleVerifyOtp} className="p-6 space-y-4">
+          <form onSubmit={handleVerifyOtp} className="p-5 sm:p-6 space-y-4">
             <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 flex items-start gap-3">
               <MailCheck className="w-5 h-5 text-[#B38818] shrink-0 mt-0.5" />
-              <div className="text-xs text-slate-700 leading-relaxed">
+              <div className="text-xs text-slate-700 leading-relaxed min-w-0">
                 <p className="font-bold text-[#0D1F3C]">
                   {step === 'signup-otp' ? t('auth.titleSignupOtp') : t('auth.titleSigninOtp')}
                 </p>
                 <p className="mt-1">
                   Enter the 6-digit verification code sent to{' '}
-                  <strong className="text-[#0D1F3C]">{email.trim()}</strong> to unlock your Singapore depository dashboard.
+                  <strong className="text-[#0D1F3C] break-all">{email.trim()}</strong> to unlock your Singapore depository dashboard.
                 </p>
               </div>
             </div>
@@ -682,7 +682,7 @@ export const AuthModal: React.FC = () => {
 
         {/* STEP C1: Forgot Password — Request 6-Digit Reset Code */}
         {step === 'forgot-email' && (
-          <form onSubmit={handleForgotEmailSubmit} autoComplete="on" className="p-6 space-y-4">
+          <form onSubmit={handleForgotEmailSubmit} autoComplete="on" className="p-5 sm:p-6 space-y-4">
             <div className="bg-[#F8FAFC] border border-slate-200 rounded p-4 flex items-start gap-3">
               <KeyRound className="w-5 h-5 text-[#B38818] shrink-0 mt-0.5" />
               <div className="text-xs text-slate-700 leading-relaxed">
@@ -707,7 +707,7 @@ export const AuthModal: React.FC = () => {
                 value={resetEmail}
                 onChange={(e) => setResetEmail(e.target.value)}
                 placeholder="name@company.com"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
               />
             </div>
 
@@ -721,7 +721,7 @@ export const AuthModal: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full py-2.5 bg-[#0D1F3C] hover:bg-[#193561] disabled:opacity-60 text-white font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3 sm:py-2.5 min-h-[44px] bg-[#0D1F3C] hover:bg-[#193561] disabled:opacity-60 text-white font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
             >
               <MailCheck className="w-4 h-4 text-[#F2D06B]" />
               <span>{submitting ? t('common.sending') : t('auth.sendResetCode')}</span>
@@ -747,9 +747,9 @@ export const AuthModal: React.FC = () => {
 
         {/* STEP C2: Forgot Password — Enter 6-Digit Reset Code & New Password */}
         {step === 'forgot-verify' && (
-          <form onSubmit={handleForgotResetSubmit} autoComplete="on" className="p-6 space-y-3.5">
+          <form onSubmit={handleForgotResetSubmit} autoComplete="on" className="p-5 sm:p-6 space-y-3.5">
             <div>
-              <label htmlFor="reset-code-input" className="block text-xs font-semibold text-slate-700 mb-1">
+              <label htmlFor="reset-code-input" className="block text-xs font-semibold text-slate-700 mb-1 break-all">
                 {t('auth.otpLabel')} ({resetEmail.trim()})
               </label>
               <input
@@ -781,7 +781,7 @@ export const AuthModal: React.FC = () => {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Minimum 6 characters"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
               />
             </div>
 
@@ -799,7 +799,7 @@ export const AuthModal: React.FC = () => {
                 value={confirmNewPassword}
                 onChange={(e) => setConfirmNewPassword(e.target.value)}
                 placeholder="Re-enter new password"
-                className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
               />
             </div>
 

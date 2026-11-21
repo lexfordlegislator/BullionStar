@@ -86,9 +86,9 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
 
   return (
     <header className="w-full bg-white border-b border-slate-200 sticky top-0 z-40 no-print">
-      {/* 1. Top Utility Bar */}
-      <div className="bg-[#0A162B] text-slate-200 text-xs border-b border-[#1A2D4D]">
-        <div className="max-w-[1360px] mx-auto px-4 lg:px-6 h-9 flex items-center justify-between gap-4">
+      {/* 1. Top Utility Bar (Tablet & Desktop >= 768px) */}
+      <div className="hidden md:block bg-[#0A162B] text-slate-200 text-xs border-b border-[#1A2D4D]">
+        <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 h-9 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
             <label className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
               <Globe className="w-3.5 h-3.5 text-[#C59B27]" />
@@ -124,9 +124,9 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
               </select>
             </label>
 
-            <span className="text-slate-600 hidden sm:inline" aria-hidden="true">|</span>
+            <span className="text-slate-600" aria-hidden="true">|</span>
 
-            <label className="hidden sm:flex items-center gap-1.5 whitespace-nowrap shrink-0">
+            <label className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
               <MapPin className="w-3.5 h-3.5 text-[#C59B27]" />
               <span className="text-slate-400">{t('header.stockLocation')}</span>
               <select
@@ -188,26 +188,17 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
         </div>
       </div>
 
-      {/* 2. Primary Header: Logo, Search, Sign In / Create Account / Your Account, Cart */}
-      <div className="max-w-[1360px] mx-auto px-4 lg:px-6 py-3 flex items-center justify-between gap-4 lg:gap-6">
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden p-2 -ml-2 text-[#0D1F3C] hover:bg-slate-100 rounded-md"
-            aria-label="Toggle Menu"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <button
-            onClick={() => navigateCategory('All', 'home')}
-            className="flex items-center text-left group whitespace-nowrap shrink-0 focus:outline-none"
-            aria-label="BullionStar Home"
-          >
-            <BullionStarLogo variant="light" size="md" />
-          </button>
-        </div>
+      {/* 2. Primary Header: Logo, Search, Language (Mobile), Sign In / Account, Cart, Hamburger */}
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-4 lg:gap-6">
+        <button
+          onClick={() => navigateCategory('All', 'home')}
+          className="flex items-center text-left group whitespace-nowrap shrink-0 max-w-[155px] sm:max-w-[220px] focus:outline-none"
+          aria-label="BullionStar Home"
+        >
+          <BullionStarLogo variant="light" size="md" />
+        </button>
 
-        {/* Search Bar */}
+        {/* Search Bar (Tablet & Desktop >= 768px) */}
         <div className="hidden md:block flex-1 max-w-lg relative">
           <form
             onSubmit={(e) => {
@@ -263,19 +254,37 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
           )}
         </div>
 
-        {/* Account Auth & Cart Controls */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        {/* Right Controls: Mobile Language, Sign In / Client Portal, Cart, Mobile Hamburger */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Compact Mobile Language Switcher (< 768px) */}
+          <div className="relative md:hidden inline-flex items-center justify-center gap-1 h-9 px-2 bg-[#F4F6F9] border border-slate-200 rounded text-xs font-semibold text-[#0D1F3C]">
+            <Globe className="w-3.5 h-3.5 text-[#C59B27] shrink-0" />
+            <span className="uppercase">{language}</span>
+            <select
+              aria-label={t('footer.languageLabel')}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as LanguageCode)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            >
+              {SUPPORTED_LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {!isLoggedIn ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={() => openAuthModal('signin')}
-                className="px-3 py-2 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-xs sm:text-sm font-semibold text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
+                className="h-9 sm:h-auto px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-xs sm:text-sm font-semibold text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
               >
                 {t('header.signIn')}
               </button>
               <button
                 onClick={() => openAuthModal('signup')}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#0D1F3C] hover:bg-[#193561] text-white rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 bg-[#0D1F3C] hover:bg-[#193561] text-white rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
               >
                 <UserPlus className="w-3.5 h-3.5 text-[#F2D06B]" />
                 <span>{t('header.createAccount')}</span>
@@ -285,9 +294,13 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
             <div className="relative">
               <button
                 onClick={() => setAccountDropdown(!accountDropdown)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-sm font-medium text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
+                className="h-9 sm:h-auto flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-xs sm:text-sm font-medium text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
+                aria-label={t('header.yourAccountDashboard')}
               >
-                <User className="w-4 h-4 text-[#B38818]" />
+                <User className="w-4 h-4 text-[#B38818] shrink-0" />
+                <span className="sm:hidden text-xs font-semibold text-[#0D1F3C]">
+                  {(client.full_name || 'Portal').split(' ')[0]}
+                </span>
                 <div className="text-left hidden sm:block">
                   <div className="text-xs font-semibold text-[#0D1F3C] leading-tight">
                     {(client.full_name || 'Vault Client').split(' ')[0]}
@@ -299,13 +312,13 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                     {client.vault_id || 'BS-SG'}
                   </div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
               </button>
 
               {accountDropdown && (
-                <div className="absolute right-0 top-12 w-64 bg-white border border-slate-200 rounded shadow-lg z-50 py-1.5">
+                <div className="absolute right-0 top-11 sm:top-12 w-64 max-w-[calc(100vw-2rem)] bg-white border border-slate-200 rounded shadow-lg z-50 py-1.5">
                   <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-xs font-bold text-slate-900">{client.full_name}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate">{client.full_name}</p>
                     <p className="text-[11px] text-slate-500 truncate">{client.email}</p>
                   </div>
                   <button
@@ -313,7 +326,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                       setView('account');
                       setAccountDropdown(false);
                     }}
-                    className="w-full text-start px-4 py-2 text-sm text-slate-700 hover:bg-[#F4F6F9]"
+                    className="w-full text-start px-4 py-2.5 text-sm text-slate-700 hover:bg-[#F4F6F9]"
                   >
                     {t('header.yourAccountDashboard')}
                   </button>
@@ -322,7 +335,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
                       logout();
                       setAccountDropdown(false);
                     }}
-                    className="w-full text-start px-4 py-2 text-sm text-rose-700 hover:bg-rose-50 border-t border-slate-100 mt-1"
+                    className="w-full text-start px-4 py-2.5 text-sm text-rose-700 hover:bg-rose-50 border-t border-slate-100 mt-1"
                   >
                     {t('header.signOut')}
                   </button>
@@ -333,20 +346,30 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
 
           <button
             onClick={() => setCartOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded font-semibold text-sm transition-colors whitespace-nowrap shrink-0"
+            aria-label="Open Cart"
+            className="h-9 sm:h-auto flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded font-semibold text-xs sm:text-sm transition-colors whitespace-nowrap shrink-0"
           >
-            <ShoppingCart className="w-4 h-4" />
+            <ShoppingCart className="w-4 h-4 shrink-0" />
             <span className="tabular-nums">{totalCartItems}</span>
             <span className="hidden lg:inline border-l border-[#0A162B]/20 pl-2 font-mono text-xs tabular-nums">
               {formatMoney(totalCartUSD)}
             </span>
+          </button>
+
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden h-9 w-9 flex items-center justify-center text-[#0D1F3C] hover:bg-slate-100 border border-slate-200 rounded transition-colors shrink-0"
+            aria-label="Toggle Menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
       {/* 3. Multi-Category Navigation Bar */}
       <nav className="bg-[#13294B] text-white border-t border-[#1D3A68]">
-        <div className="max-w-[1360px] mx-auto px-4 lg:px-6 hidden lg:flex items-center justify-between">
+        <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 hidden lg:flex items-center justify-between">
           <div className="flex items-center">
             {[
               { label: t('nav.preciousMetals'), active: view === 'catalog' || view === 'home', action: () => navigateCategory('All', 'catalog') },
@@ -378,35 +401,119 @@ export const Header: React.FC<HeaderProps> = ({ onSelectMetalChart }) => {
         </div>
 
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#0D1F3C] px-4 py-3 space-y-1 border-t border-[#1D3A68]">
-            <div className="pb-2">
+          <div className="lg:hidden bg-[#0D1F3C] px-4 py-4 space-y-2 border-t border-[#1D3A68] max-h-[calc(100vh-64px)] overflow-y-auto">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setMobileMenuOpen(false);
+                setView('catalog');
+              }}
+              className="flex items-center gap-2 pb-1"
+            >
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('header.mobileSearchPlaceholder')}
-                className="w-full px-3 py-2 text-sm bg-[#13294B] border border-[#274980] rounded text-white placeholder:text-slate-400"
+                className="flex-1 min-w-0 h-11 px-3.5 text-base bg-[#13294B] border border-[#274980] rounded text-white placeholder:text-slate-400 focus:outline-none focus:border-[#C59B27]"
               />
-            </div>
-            {[
-              { label: t('nav.homeExchange'), action: () => navigateCategory('All', 'home') },
-              { label: t('nav.allPreciousMetals'), action: () => navigateCategory('All', 'catalog') },
-              { label: t('nav.goldBullion'), action: () => navigateCategory('Gold', 'catalog') },
-              { label: t('nav.silverBullion'), action: () => navigateCategory('Silver', 'catalog') },
-              { label: t('nav.certifiedDiamonds'), action: () => navigateCategory('Diamond', 'catalog') },
-              { label: t('nav.storageSingaporeVaults'), action: () => navigateCategory('All', 'vaults') },
-              { label: t('nav.liveSpotCharts'), action: () => navigateCategory('All', 'charts') },
-              { label: t('nav.yourAccountPortal'), action: () => navigateCategory('All', 'account') },
-              { label: t('nav.contactUs'), action: () => { setMobileMenuOpen(false); scrollToContact(); } },
-            ].map((nav) => (
               <button
-                key={nav.label}
-                onClick={nav.action}
-                className="block w-full text-start px-3 py-2 text-sm text-slate-200 hover:bg-[#193561] rounded"
+                type="submit"
+                aria-label="Search Catalog"
+                className="h-11 px-4 bg-[#C59B27] text-[#0A162B] rounded font-semibold flex items-center justify-center shrink-0"
               >
-                {nav.label}
+                <Search className="w-4 h-4" />
               </button>
-            ))}
+            </form>
+
+            {!isLoggedIn && (
+              <div className="grid grid-cols-2 gap-2 pb-2 border-b border-[#1D3A68]">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openAuthModal('signin');
+                  }}
+                  className="min-h-[44px] px-3 py-2.5 bg-[#13294B] border border-[#274980] text-white rounded text-sm font-semibold"
+                >
+                  {t('header.signIn')}
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    openAuthModal('signup');
+                  }}
+                  className="min-h-[44px] inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#C59B27] text-[#0A162B] rounded text-sm font-semibold"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>{t('header.createAccount')}</span>
+                </button>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              {[
+                { label: t('nav.homeExchange'), action: () => navigateCategory('All', 'home') },
+                { label: t('nav.allPreciousMetals'), action: () => navigateCategory('All', 'catalog') },
+                { label: t('nav.goldBullion'), action: () => navigateCategory('Gold', 'catalog') },
+                { label: t('nav.silverBullion'), action: () => navigateCategory('Silver', 'catalog') },
+                { label: t('nav.platinumPalladium'), action: () => navigateCategory('Platinum', 'catalog') },
+                { label: t('nav.certifiedDiamonds'), action: () => navigateCategory('Diamond', 'catalog') },
+                { label: t('nav.storageSingaporeVaults'), action: () => navigateCategory('All', 'vaults') },
+                { label: t('nav.liveSpotCharts'), action: () => navigateCategory('All', 'charts') },
+                { label: t('nav.yourAccountPortal'), action: () => navigateCategory('All', 'account') },
+                { label: t('nav.contactUs'), action: () => { setMobileMenuOpen(false); scrollToContact(); } },
+              ].map((nav) => (
+                <button
+                  key={nav.label}
+                  onClick={nav.action}
+                  className="flex items-center w-full min-h-[44px] text-start px-3.5 py-2.5 text-sm font-medium text-slate-100 hover:bg-[#193561] rounded transition-colors"
+                >
+                  {nav.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#1D3A68]">
+              <label className="flex flex-col gap-1 text-[11px] text-slate-400">
+                <span>{t('header.currency')}</span>
+                <select
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+                  className="h-10 px-2.5 bg-[#13294B] border border-[#274980] rounded text-sm font-semibold text-[#F2D06B]"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1 text-[11px] text-slate-400">
+                <span>{t('header.stockLocation')}</span>
+                <select
+                  value={stockLocation}
+                  onChange={(e) => setStockLocation(e.target.value as StockLocation)}
+                  className="h-10 px-2.5 bg-[#13294B] border border-[#274980] rounded text-sm font-medium text-white"
+                >
+                  {LOCATIONS.map((loc) => (
+                    <option key={loc} value={loc}>
+                      {loc}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between text-xs text-slate-300">
+              <a
+                href="mailto:info@bullionstar.in.net"
+                className="inline-flex items-center gap-1.5 text-[#F2D06B] font-medium"
+              >
+                <Mail className="w-3.5 h-3.5 shrink-0" />
+                <span>info@bullionstar.in.net</span>
+              </a>
+            </div>
           </div>
         )}
       </nav>

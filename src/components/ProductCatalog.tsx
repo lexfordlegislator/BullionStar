@@ -133,7 +133,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
       {mode === 'homepage' ? (
         <div className="space-y-10">
           {/* Trending Bullion Products */}
-          <section className="max-w-[1360px] mx-auto px-4 lg:px-6 pt-8">
+          <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 pt-8">
             <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-[#0D1F3C]">
@@ -153,13 +153,13 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                 {t('catalog.viewFull')}
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               {trendingMetals.map(renderCard)}
             </div>
           </section>
 
           {/* Certified GIA Diamonds Showcase */}
-          <section className="max-w-[1360px] mx-auto px-4 lg:px-6">
+          <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex flex-wrap items-end justify-between gap-4 mb-5">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold text-[#0D1F3C]">
@@ -177,13 +177,13 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                 {t('catalog.viewDiamonds')}
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {certifiedDiamonds.map(renderCard)}
             </div>
           </section>
         </div>
       ) : (
-        <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-8">
+        <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-200 mb-6">
             <div>
               <h1 className="text-2xl font-bold text-[#0D1F3C]">{t('catalog.exchangeTitle')}</h1>
@@ -192,12 +192,12 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 bg-white p-1 border border-slate-200 rounded">
+            <div className="flex items-center gap-1.5 bg-white p-1 border border-slate-200 rounded overflow-x-auto no-scrollbar max-w-full">
               {(['All', 'Gold', 'Silver', 'Platinum', 'Palladium', 'Diamond'] as const).map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setCatalogFilter(cat as MetalType | 'All')}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-sm transition-colors whitespace-nowrap shrink-0 ${
+                  className={`px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-sm transition-colors whitespace-nowrap shrink-0 ${
                     catalogFilter === cat
                       ? 'bg-[#0D1F3C] text-white'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-[#0D1F3C]'
@@ -210,14 +210,14 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
           </div>
 
           {searchQuery && (
-            <div className="mb-5 flex items-center justify-between bg-white px-4 py-2.5 border border-slate-200 rounded text-sm">
-              <span>
+            <div className="mb-5 flex items-center justify-between gap-3 bg-white px-4 py-2.5 border border-slate-200 rounded text-sm">
+              <span className="min-w-0 truncate">
                 {t('catalog.filteredBySearch')}{' '}
                 <strong className="text-[#0D1F3C]">{searchQuery}</strong>
               </span>
               <button
                 onClick={() => setSearchQuery('')}
-                className="text-xs font-semibold text-[#B38818] hover:underline"
+                className="text-xs font-semibold text-[#B38818] hover:underline shrink-0"
               >
                 {t('catalog.clearFilter')}
               </button>
@@ -225,7 +225,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
           )}
 
           {filteredProducts.length === 0 ? (
-            <div className="bg-white border border-slate-200 rounded p-12 text-center">
+            <div className="bg-white border border-slate-200 rounded p-8 sm:p-12 text-center">
               <p className="text-base font-semibold text-[#0D1F3C]">{t('catalog.noMatchesTitle')}</p>
               <p className="text-sm text-slate-500 mt-1">{t('catalog.noMatchesSub')}</p>
               <button
@@ -233,13 +233,13 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                   setSearchQuery('');
                   setCatalogFilter('All');
                 }}
-                className="mt-4 px-4 py-2 bg-[#0D1F3C] text-white text-sm font-medium rounded"
+                className="mt-4 px-4 py-2.5 bg-[#0D1F3C] text-white text-sm font-medium rounded"
               >
                 {t('catalog.resetFilters')}
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
               {filteredProducts.map(renderCard)}
             </div>
           )}
@@ -248,30 +248,30 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
 
       {/* Product Assay & Dossier Inspection Modal */}
       {selectedProduct && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-md max-w-3xl w-full overflow-hidden shadow-xl">
-            <div className="flex items-center justify-between px-6 py-4 bg-[#0D1F3C] text-white">
-              <div>
-                <p className="text-xs text-[#F2D06B] font-mono">{selectedProduct.sku}</p>
-                <h3 className="text-lg font-bold">{selectedProduct.name}</h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 bg-[#0D1F3C] text-white sticky top-0 z-10">
+              <div className="min-w-0">
+                <p className="text-xs text-[#F2D06B] font-mono truncate">{selectedProduct.sku}</p>
+                <h3 className="text-base sm:text-lg font-bold leading-snug">{selectedProduct.name}</h3>
               </div>
               <button
                 onClick={() => setSelectedProduct(null)}
                 aria-label="Close product modal"
-                className="p-1.5 hover:bg-white/10 rounded"
+                className="p-1.5 hover:bg-white/10 rounded shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2">
-              <div className="bg-[#F8FAFC] p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-200">
+              <div className="bg-[#F8FAFC] p-4 sm:p-6 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-200">
                 <div className="aspect-[4/3] w-full rounded overflow-hidden border border-slate-200 bg-white">
                   <ResilientImage src={selectedProduct.image} alt={selectedProduct.name} />
                 </div>
               </div>
 
-              <div className="p-6 flex flex-col justify-between space-y-4">
+              <div className="p-4 sm:p-6 flex flex-col justify-between space-y-4">
                 <div>
                   <p className="text-sm text-slate-600 leading-relaxed mb-4">
                     {selectedProduct.description}
@@ -322,7 +322,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                             | 'Insured Delivery'
                         )
                       }
-                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white text-slate-900"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded bg-white text-slate-900"
                     >
                       <option value="Vault Storage (Singapore)">{t('catalog.optVault')}</option>
                       <option value="Showroom Pickup (45 New Bridge Rd)">
@@ -333,7 +333,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-4">
+                <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   <div>
                     <span className="text-xs text-slate-500 block">{t('catalog.liveExecPrice')}</span>
                     <span className="text-xl font-mono font-bold text-[#0D1F3C] tabular-nums">
@@ -345,7 +345,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ mode }) => {
                       addToCart(selectedProduct, 1, fulfillmentChoice);
                       setSelectedProduct(null);
                     }}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-semibold text-sm rounded transition-colors"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-semibold text-sm rounded transition-colors"
                   >
                     <Check className="w-4 h-4" />
                     <span>{t('catalog.addToOrder')}</span>

@@ -14,22 +14,22 @@ export interface BullionStarLogoProps {
 
 const SIZE_MAP = {
   sm: {
-    icon: 'w-8 h-8',
-    wordmark: 'text-[15px] sm:text-base tracking-[0.18em]',
-    subcaption: 'text-[8.5px] tracking-[0.2em]',
-    gap: 'gap-2.5',
+    icon: 'w-7 h-7 sm:w-8 sm:h-8',
+    wordmark: 'text-sm sm:text-base tracking-[0.14em] sm:tracking-[0.18em]',
+    subcaption: 'text-[7px] sm:text-[8.5px] tracking-[0.12em] sm:tracking-[0.2em]',
+    gap: 'gap-2 sm:gap-2.5',
   },
   md: {
-    icon: 'w-10 h-10',
-    wordmark: 'text-lg sm:text-[21px] tracking-[0.18em]',
-    subcaption: 'text-[9.5px] tracking-[0.21em]',
-    gap: 'gap-3',
+    icon: 'w-8 h-8 sm:w-10 sm:h-10',
+    wordmark: 'text-[14px] sm:text-[21px] tracking-[0.13em] sm:tracking-[0.18em]',
+    subcaption: 'text-[7px] sm:text-[9.5px] tracking-[0.11em] sm:tracking-[0.21em]',
+    gap: 'gap-2 sm:gap-3',
   },
   lg: {
-    icon: 'w-12 h-12',
-    wordmark: 'text-2xl tracking-[0.2em]',
-    subcaption: 'text-[10.5px] tracking-[0.22em]',
-    gap: 'gap-3.5',
+    icon: 'w-10 h-10 sm:w-12 sm:h-12',
+    wordmark: 'text-xl sm:text-2xl tracking-[0.16em] sm:tracking-[0.2em]',
+    subcaption: 'text-[9px] sm:text-[10.5px] tracking-[0.18em] sm:tracking-[0.22em]',
+    gap: 'gap-2.5 sm:gap-3.5',
   },
 } as const;
 

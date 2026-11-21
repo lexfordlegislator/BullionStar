@@ -402,26 +402,26 @@ export const ClientPortal: React.FC = () => {
 
   if (!isLoggedIn) {
     return (
-      <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-12">
+      <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
         <div className="max-w-xl mx-auto bg-white border border-slate-200 rounded-md overflow-hidden shadow-sm">
-          <div className="bg-[#0D1F3C] px-6 py-5 text-white space-y-2.5">
+          <div className="bg-[#0D1F3C] px-5 sm:px-6 py-5 text-white space-y-2.5">
             <BullionStarLogo variant="dark" size="sm" />
-            <h1 className="font-serif text-2xl font-bold pt-1">{t('portal.guestTitle')}</h1>
+            <h1 className="font-serif text-xl sm:text-2xl font-bold pt-1">{t('portal.guestTitle')}</h1>
           </div>
-          <div className="p-6 space-y-5">
+          <div className="p-5 sm:p-6 space-y-5">
             <p className="text-sm text-slate-600 leading-relaxed">{t('portal.guestDesc')}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => openAuthModal('signin')}
-                className="py-3 px-4 bg-[#0D1F3C] hover:bg-[#193561] text-white font-semibold text-sm rounded transition-colors flex items-center justify-center gap-2"
+                className="py-3 px-4 min-h-[44px] bg-[#0D1F3C] hover:bg-[#193561] text-white font-semibold text-sm rounded transition-colors flex items-center justify-center gap-2"
               >
                 <Lock className="w-4 h-4 text-[#F2D06B]" />
                 <span>{t('portal.signInEmail')}</span>
               </button>
               <button
                 onClick={() => openAuthModal('signup')}
-                className="py-3 px-4 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
+                className="py-3 px-4 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>{t('header.createAccount')}</span>
@@ -432,7 +432,7 @@ export const ClientPortal: React.FC = () => {
               <div className="text-xs text-slate-500">{t('portal.demoPreviewPrompt')}</div>
               <button
                 onClick={demoLogin}
-                className="px-3.5 py-2 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-xs font-semibold text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
+                className="px-3.5 py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 bg-[#F4F6F9] hover:bg-slate-200 border border-slate-200 rounded text-xs font-semibold text-[#0D1F3C] transition-colors whitespace-nowrap shrink-0"
               >
                 {t('portal.demoLogin')}
               </button>
@@ -444,12 +444,12 @@ export const ClientPortal: React.FC = () => {
   }
 
   return (
-    <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-8 space-y-6">
+    <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       {/* Client Summary Header */}
-      <div className="bg-[#0D1F3C] text-white rounded-md p-6 border border-[#1D3A68]">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-[#F2D06B] mb-1">
+      <div className="bg-[#0D1F3C] text-white rounded-md p-4 sm:p-6 border border-[#1D3A68]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#F2D06B] mb-1">
               <span className="font-mono font-semibold">{client.vault_id || 'BS-SG'}</span>
               <span aria-hidden="true">·</span>
               <span>{isDemoMode ? t('portal.demoMode') : t('portal.segregatedVault')}</span>
@@ -462,20 +462,20 @@ export const ClientPortal: React.FC = () => {
                 </>
               )}
             </div>
-            <h1 className="font-serif text-2xl sm:text-3xl font-bold">{client.full_name}</h1>
-            <p className="text-xs text-slate-300 mt-1">
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold break-words">{client.full_name}</h1>
+            <p className="text-xs text-slate-300 mt-1 break-all">
               {client.email} {client.phone ? `· ${client.phone}` : ''}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
             <button
               onClick={refreshClientSession}
               disabled={refreshingClient}
               title="Re-fetch your latest balances from Supabase"
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#13294B] hover:bg-[#1E3D6E] disabled:opacity-60 border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-3.5 py-2.5 sm:py-2 min-h-[42px] bg-[#13294B] hover:bg-[#1E3D6E] disabled:opacity-60 border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-[#F2D06B] ${refreshingClient ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 text-[#F2D06B] shrink-0 ${refreshingClient ? 'animate-spin' : ''}`} />
               <span>{refreshingClient ? t('common.refreshing') : t('common.refresh')}</span>
             </button>
             <button
@@ -486,10 +486,10 @@ export const ClientPortal: React.FC = () => {
                 setFundingError('');
                 setFundingModal(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 min-h-[42px] bg-[#193561] hover:bg-[#22457C] border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
             >
-              <Wallet className="w-4 h-4 text-[#F2D06B]" />
-              <span>{t('portal.btnDepositWithdraw')}</span>
+              <Wallet className="w-4 h-4 text-[#F2D06B] shrink-0" />
+              <span className="truncate">{t('portal.btnDepositWithdraw')}</span>
             </button>
             <button
               onClick={() => {
@@ -501,17 +501,17 @@ export const ClientPortal: React.FC = () => {
                 setPhysError('');
                 setPhysicalModal(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 min-h-[42px] bg-[#193561] hover:bg-[#22457C] border border-white/15 rounded text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap shrink-0"
             >
-              <Vault className="w-4 h-4 text-[#F2D06B]" />
-              <span>{t('portal.btnDepositPhysical')}</span>
+              <Vault className="w-4 h-4 text-[#F2D06B] shrink-0" />
+              <span className="truncate">{t('portal.btnDepositPhysical')}</span>
             </button>
             <button
               onClick={openReleaseModal}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#193561] hover:bg-[#22457C] border border-[#C59B27]/50 rounded text-xs sm:text-sm font-semibold text-[#F2D06B] transition-colors whitespace-nowrap shrink-0"
+              className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 sm:py-2 min-h-[42px] bg-[#193561] hover:bg-[#22457C] border border-[#C59B27]/50 rounded text-xs sm:text-sm font-semibold text-[#F2D06B] transition-colors whitespace-nowrap shrink-0"
             >
-              <Truck className="w-4 h-4 text-[#F2D06B]" />
-              <span>{t('portal.btnReleaseMetals')}</span>
+              <Truck className="w-4 h-4 text-[#F2D06B] shrink-0" />
+              <span className="truncate">{t('portal.btnReleaseMetals')}</span>
             </button>
             <button
               onClick={() => {
@@ -521,9 +521,9 @@ export const ClientPortal: React.FC = () => {
                 setTradeError('');
                 setTradeModal(true);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded text-xs sm:text-sm font-bold transition-colors whitespace-nowrap shrink-0"
+              className="col-span-2 sm:col-span-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 min-h-[42px] bg-[#C59B27] hover:bg-[#B38818] text-[#0A162B] rounded text-xs sm:text-sm font-bold transition-colors whitespace-nowrap shrink-0"
             >
-              <ArrowDownUp className="w-4 h-4" />
+              <ArrowDownUp className="w-4 h-4 shrink-0" />
               <span>{t('portal.btnBuySell')}</span>
             </button>
           </div>
@@ -573,16 +573,19 @@ export const ClientPortal: React.FC = () => {
         </div>
       </div>
 
-      {/* Left Navigation Sidebar + Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <aside className="lg:col-span-3 bg-white border border-slate-200 rounded-md overflow-hidden lg:sticky lg:top-40">
-          <div className="bg-[#0A162B] px-4 py-3.5 text-white border-b border-[#1D3A68] space-y-2.5">
+      {/* Left Navigation Sidebar (Horizontal Scrollable Pill Bar on Mobile, Sticky Sidebar on Desktop) + Main Content Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+        <aside className="lg:col-span-3 bg-white border border-slate-200 rounded-md overflow-hidden lg:sticky lg:top-40 min-w-0">
+          <div className="bg-[#0A162B] px-4 py-3 sm:py-3.5 text-white border-b border-[#1D3A68] flex lg:flex-col items-center lg:items-start justify-between gap-2.5">
             <BullionStarLogo variant="dark" size="sm" />
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-[#F2D06B] pt-2 border-t border-white/10">
+            <p className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#F2D06B] lg:w-full lg:pt-2 lg:border-t lg:border-white/10">
               {t('portal.menuTitle')}
             </p>
           </div>
-          <nav aria-label="Client dashboard navigation" className="p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible">
+          <nav
+            aria-label="Client dashboard navigation"
+            className="p-2.5 lg:p-2 flex lg:flex-col gap-1.5 lg:gap-1 overflow-x-auto no-scrollbar lg:overflow-visible"
+          >
             {[
               { id: 'overview' as AccountTab, label: t('portal.tabOverview') },
               { id: 'holdings' as AccountTab, label: t('portal.tabHoldings', { count: holdings.length }) },
@@ -601,10 +604,10 @@ export const ClientPortal: React.FC = () => {
                     refreshClientTransactions();
                   }
                 }}
-                className={`px-3.5 py-2.5 text-start text-xs sm:text-sm font-semibold rounded-sm transition-colors whitespace-nowrap lg:whitespace-normal shrink-0 flex items-center justify-between gap-2 ${
+                className={`px-3.5 py-2 sm:py-2.5 min-h-[40px] text-start text-xs sm:text-sm font-semibold rounded-full lg:rounded-sm transition-colors whitespace-nowrap lg:whitespace-normal shrink-0 flex items-center justify-between gap-2 border lg:border-0 lg:border-s-4 ${
                   activeTab === tab.id
-                    ? 'bg-[#0D1F3C] text-[#F2D06B] border-s-4 border-[#C59B27]'
-                    : 'text-slate-700 hover:bg-[#F4F6F9] hover:text-[#0D1F3C] border-s-4 border-transparent'
+                    ? 'bg-[#0D1F3C] text-[#F2D06B] border-[#C59B27]'
+                    : 'bg-[#F4F6F9] lg:bg-transparent text-slate-700 hover:bg-[#F4F6F9] hover:text-[#0D1F3C] border-slate-200 lg:border-transparent'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -1409,34 +1412,34 @@ export const ClientPortal: React.FC = () => {
       {/* TAB 6: Transaction History (Synced live from Supabase vault_transactions) */}
       {activeTab === 'history' && (
         <div className="bg-white border border-slate-200 rounded overflow-hidden">
-          <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+          <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-[#0D1F3C]">{t('portal.txTitle')}</h2>
               <p className="text-xs text-slate-500">{t('portal.txSubtitle')}</p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={refreshClientTransactions}
                 disabled={transactionsLoading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 hover:bg-slate-50 rounded text-xs font-semibold text-[#0D1F3C]"
+                className="inline-flex items-center gap-1.5 px-3 py-2 sm:py-1.5 border border-slate-300 hover:bg-slate-50 rounded text-xs font-semibold text-[#0D1F3C]"
               >
                 <RefreshCw className={`w-3.5 h-3.5 text-[#B38818] ${transactionsLoading ? 'animate-spin' : ''}`} />
                 <span>{transactionsLoading ? t('common.refreshing') : t('common.refresh')}</span>
               </button>
-              <div className="relative">
+              <div className="relative flex-1 sm:flex-none">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute start-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   value={txSearch}
                   onChange={(e) => setTxSearch(e.target.value)}
                   placeholder={t('portal.txSearchPlaceholder')}
-                  className="ps-8 pe-3 py-1.5 text-xs border border-slate-300 rounded w-44 sm:w-48"
+                  className="ps-8 pe-3 py-2 sm:py-1.5 text-base sm:text-xs border border-slate-300 rounded w-full sm:w-48"
                 />
               </div>
               <select
                 value={txFilter}
                 onChange={(e) => setTxFilter(e.target.value)}
-                className="px-2.5 py-1.5 text-xs border border-slate-300 rounded bg-white font-semibold"
+                className="px-2.5 py-2 sm:py-1.5 text-base sm:text-xs border border-slate-300 rounded bg-white font-semibold"
               >
                 <option value="All">{t('status.All')}</option>
                 <option value="Pending">{t('status.Pending')}</option>
@@ -1681,7 +1684,7 @@ export const ClientPortal: React.FC = () => {
                       value={secNewPassword}
                       onChange={(e) => setSecNewPassword(e.target.value)}
                       placeholder="Minimum 6 characters"
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                     />
                   </div>
                   <div>
@@ -1698,7 +1701,7 @@ export const ClientPortal: React.FC = () => {
                       value={secConfirmPassword}
                       onChange={(e) => setSecConfirmPassword(e.target.value)}
                       placeholder="Re-enter new password"
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                     />
                   </div>
 
@@ -1801,7 +1804,7 @@ export const ClientPortal: React.FC = () => {
                       value={secNewEmail}
                       onChange={(e) => setSecNewEmail(e.target.value)}
                       placeholder="new.address@domain.com"
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C] disabled:bg-slate-50"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C] disabled:bg-slate-50"
                     />
                   </div>
 
@@ -1923,35 +1926,35 @@ export const ClientPortal: React.FC = () => {
 
       {/* Official Certificate Modal */}
       {certPreview && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="bg-white border-2 border-[#0D1F3C] rounded-md max-w-2xl w-full overflow-hidden shadow-2xl">
-            <div className="bg-[#0D1F3C] text-white px-6 py-4 flex items-center justify-between no-print">
-              <div className="flex items-center gap-2">
-                <FileCheck2 className="w-5 h-5 text-[#F2D06B]" />
-                <span className="font-bold text-sm">Official Vault Safekeeping Certificate</span>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white border-2 border-[#0D1F3C] rounded-md w-[94vw] max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="bg-[#0D1F3C] text-white px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-10 no-print">
+              <div className="flex items-center gap-2 min-w-0">
+                <FileCheck2 className="w-5 h-5 text-[#F2D06B] shrink-0" />
+                <span className="font-bold text-sm truncate">Official Vault Safekeeping Certificate</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => downloadCertificateTxt(certPreview)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-semibold"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-semibold"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download</span>
                 </button>
                 <button
                   onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print</span>
                 </button>
-                <button onClick={() => setCertPreview(null)} aria-label="Close certificate">
+                <button onClick={() => setCertPreview(null)} aria-label="Close certificate" className="p-1 hover:bg-white/10 rounded">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            <div className="p-6 sm:p-8 space-y-5">
+            <div className="p-5 sm:p-8 space-y-5">
               <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-[#C59B27] pb-4">
                 <div className="space-y-1.5">
                   <BullionStarLogo variant="light" size="md" />
@@ -1959,15 +1962,15 @@ export const ClientPortal: React.FC = () => {
                     45 New Bridge Road, Singapore 059398 · Allocated Depository Certificate
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right">
                   <span className="text-[11px] text-slate-500 block">Certificate Number</span>
-                  <span className="font-mono text-sm font-bold text-[#0D1F3C]">
+                  <span className="font-mono text-sm font-bold text-[#0D1F3C] break-all">
                     {certPreview.certificate_no}
                   </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="text-slate-500 block">Legal Title Holder</span>
                   <span className="font-bold text-sm text-[#0D1F3C]">{client.full_name}</span>
@@ -2032,8 +2035,8 @@ export const ClientPortal: React.FC = () => {
           (fundingAction !== 'Withdraw' || amtUSD <= cashUSD);
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
-            <div className="bg-white border border-slate-200 rounded-md max-w-xl w-full overflow-hidden shadow-xl max-h-[92vh] flex flex-col">
+          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-3 sm:p-4 no-print">
+            <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-xl overflow-hidden shadow-xl max-h-[90vh] flex flex-col">
               <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between shrink-0">
                 <div>
                   <h3 className="font-bold text-base">
@@ -2125,13 +2128,13 @@ export const ClientPortal: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Currency</label>
                     <select
                       value={fundingCurrency}
                       onChange={(e) => setFundingCurrency(e.target.value as CurrencyCode)}
-                      className="w-full px-3 py-2 text-sm border border-slate-300 rounded bg-white"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm border border-slate-300 rounded bg-white"
                     >
                       {(['USD', 'SGD', 'EUR'] as CurrencyCode[]).map((c) => (
                         <option key={c} value={c}>
@@ -2149,7 +2152,7 @@ export const ClientPortal: React.FC = () => {
                       required
                       value={fundingAmount}
                       onChange={(e) => setFundingAmount(e.target.value)}
-                      className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm font-mono border border-slate-300 rounded"
                     />
                   </div>
                 </div>
@@ -2226,7 +2229,7 @@ export const ClientPortal: React.FC = () => {
                         )
                       );
                     }}
-                    className="w-full px-3 py-2 text-sm font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
                   >
                     {SETTLEMENT_RAILS.map((rail) => (
                       <option key={rail} value={rail}>
@@ -2278,7 +2281,7 @@ export const ClientPortal: React.FC = () => {
                             onChange={(e) =>
                               setFundingFields((prev) => ({ ...prev, [field.key]: e.target.value }))
                             }
-                            className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
+                            className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded bg-white"
                           >
                             {field.options.map((opt) => (
                               <option key={opt} value={opt}>
@@ -2295,7 +2298,7 @@ export const ClientPortal: React.FC = () => {
                               setFundingFields((prev) => ({ ...prev, [field.key]: e.target.value }))
                             }
                             placeholder={field.placeholder}
-                            className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                            className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                           />
                         )}
                       </div>
@@ -2361,8 +2364,8 @@ export const ClientPortal: React.FC = () => {
         const canContinueTrade = tradeQty > 0 && fieldsValidation.valid && hasCashForBuy;
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
-            <div className="bg-white border border-slate-200 rounded-md max-w-xl w-full overflow-hidden shadow-xl max-h-[92vh] flex flex-col">
+          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-3 sm:p-4 no-print">
+            <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-xl overflow-hidden shadow-xl max-h-[90vh] flex flex-col">
               <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between shrink-0">
                 <div>
                   <h3 className="font-bold text-base">
@@ -2467,7 +2470,7 @@ export const ClientPortal: React.FC = () => {
                     <select
                       value={tradeProductId}
                       onChange={(e) => setTradeProductId(e.target.value)}
-                      className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded bg-white"
                     >
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
@@ -2484,12 +2487,12 @@ export const ClientPortal: React.FC = () => {
                       min="1"
                       value={tradeQty}
                       onChange={(e) => setTradeQty(Math.max(1, Number(e.target.value)))}
-                      className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded"
+                      className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm font-mono border border-slate-300 rounded"
                     />
                   </div>
                 </div>
 
-                <div className="bg-[#F8FAFC] border border-slate-200 rounded p-3 text-xs flex justify-between items-center">
+                <div className="bg-[#F8FAFC] border border-slate-200 rounded p-3 text-xs flex flex-wrap justify-between items-center gap-2">
                   <span className="text-slate-600">
                     {tradeSide === 'Buy' ? 'Order Total' : 'Estimated Liquidation Value'} (Cash Avail:{' '}
                     {formatMoney(cashUSD)})
@@ -2523,7 +2526,7 @@ export const ClientPortal: React.FC = () => {
                         setTradeFields({});
                       }
                     }}
-                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
                   >
                     {BUY_PAYMENT_METHODS.map((m) => (
                       <option key={m} value={m}>
@@ -2589,7 +2592,7 @@ export const ClientPortal: React.FC = () => {
                                     [field.key]: e.target.value,
                                   }))
                                 }
-                                className="w-full px-3 py-2 text-xs border border-slate-300 rounded bg-white"
+                                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded bg-white"
                               >
                                 {field.options.map((opt) => (
                                   <option key={opt} value={opt}>
@@ -2609,7 +2612,7 @@ export const ClientPortal: React.FC = () => {
                                   }))
                                 }
                                 placeholder={field.placeholder}
-                                className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                               />
                             )}
                           </div>
@@ -2629,7 +2632,7 @@ export const ClientPortal: React.FC = () => {
                 <button
                   type="submit"
                   disabled={tradeBusy || !canContinueTrade}
-                  className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
+                  className="w-full py-3 sm:py-2.5 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
                 >
                   {tradeBusy
                     ? 'Sending 6-Digit Email OTP...'
@@ -2643,8 +2646,8 @@ export const ClientPortal: React.FC = () => {
 
       {/* Physical Gold / Bullion Vault Deposit Modal (Regional Intake Appointment) */}
       {physicalModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
-          <div className="bg-white border border-slate-200 rounded-md max-w-xl w-full overflow-hidden shadow-xl max-h-[92vh] flex flex-col">
+        <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-3 sm:p-4 no-print">
+          <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-xl overflow-hidden shadow-xl max-h-[90vh] flex flex-col">
             <div className="bg-[#0D1F3C] text-white px-5 py-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <Vault className="w-5 h-5 text-[#F2D06B]" />
@@ -2719,7 +2722,7 @@ export const ClientPortal: React.FC = () => {
                   <select
                     value={physRegion}
                     onChange={(e) => setPhysRegion(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
                   >
                     {VAULT_FACILITY_REGIONS.map((region) => (
                       <option key={region} value={region}>
@@ -2736,7 +2739,7 @@ export const ClientPortal: React.FC = () => {
                   <select
                     value={physAssetType}
                     onChange={(e) => setPhysAssetType(e.target.value)}
-                    className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C]"
                   >
                     {PHYSICAL_DEPOSIT_ASSET_TYPES.map((asset) => (
                       <option key={asset} value={asset}>
@@ -2756,7 +2759,7 @@ export const ClientPortal: React.FC = () => {
                     value={physEstimatedWeight}
                     onChange={(e) => setPhysEstimatedWeight(e.target.value)}
                     placeholder="e.g. 5 kg (5x 1 kg Gold Bars)"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                   />
                 </div>
 
@@ -2772,7 +2775,7 @@ export const ClientPortal: React.FC = () => {
                       min={new Date().toISOString().split('T')[0]}
                       value={physPreferredDate}
                       onChange={(e) => setPhysPreferredDate(e.target.value)}
-                      className="w-full pl-8 pr-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                      className="w-full pl-8 pr-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                     />
                   </div>
                 </div>
@@ -2787,7 +2790,7 @@ export const ClientPortal: React.FC = () => {
                     value={physPhone}
                     onChange={(e) => setPhysPhone(e.target.value)}
                     placeholder="+65 9123 4567"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                   />
                 </div>
 
@@ -2801,7 +2804,7 @@ export const ClientPortal: React.FC = () => {
                     value={physEmail}
                     onChange={(e) => setPhysEmail(e.target.value)}
                     placeholder="client@domain.com"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                   />
                 </div>
 
@@ -2814,7 +2817,7 @@ export const ClientPortal: React.FC = () => {
                     value={physNotes}
                     onChange={(e) => setPhysNotes(e.target.value)}
                     placeholder="Optional refiner brands, serial list, or armored courier carrier (e.g. Brink's / Malca-Amit)"
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                    className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                   />
                 </div>
               </div>
@@ -2928,8 +2931,8 @@ export const ClientPortal: React.FC = () => {
           addressComplete;
 
         return (
-          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-4 no-print">
-            <div className="bg-white border border-slate-200 rounded-md max-w-2xl w-full overflow-hidden shadow-2xl max-h-[92vh] flex flex-col">
+          <div className="fixed inset-0 z-50 bg-slate-900/65 flex items-center justify-center p-3 sm:p-4 no-print">
+            <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
               <div className="bg-[#0A162B] text-white px-5 py-4 flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2.5">
                   <Truck className="w-5 h-5 text-[#F2D06B]" />
@@ -3128,7 +3131,7 @@ export const ClientPortal: React.FC = () => {
                         value={releaseQuantity}
                         onChange={(e) => setReleaseQuantity(e.target.value)}
                         placeholder={`e.g. 1.00 ${selectedOption.unit}`}
-                        className="w-full px-3 py-2 text-sm font-mono font-semibold border border-slate-300 rounded bg-white disabled:bg-slate-100 focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm font-mono font-semibold border border-slate-300 rounded bg-white disabled:bg-slate-100 focus:outline-none focus:border-[#0D1F3C]"
                       />
                       {qtyNum > 0 && selectedOption.available > 0 && !exceedsBalance && (
                         <div className="mt-1.5 bg-[#FAF7EC] border border-[#C59B27]/35 rounded px-2.5 py-1.5 text-[11px] space-y-0.5">
@@ -3165,7 +3168,7 @@ export const ClientPortal: React.FC = () => {
                         id="release-method-select"
                         value={releaseMethod}
                         onChange={(e) => setReleaseMethod(e.target.value as ReleaseMethodType)}
-                        className="w-full px-3 py-2 text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C] focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C] focus:outline-none focus:border-[#0D1F3C]"
                       >
                         <option value="Insured Armored Delivery">
                           Insured Armored Courier Delivery (Brink&apos;s / Loomis / Malca-Amit)
@@ -3198,7 +3201,7 @@ export const ClientPortal: React.FC = () => {
                         value={relRecipientName}
                         onChange={(e) => setRelRecipientName(e.target.value)}
                         placeholder="Matching vault account holder"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
 
@@ -3212,7 +3215,7 @@ export const ClientPortal: React.FC = () => {
                         value={relPhone}
                         onChange={(e) => setRelPhone(e.target.value)}
                         placeholder="e.g. +65 9123 4567"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
 
@@ -3226,7 +3229,7 @@ export const ClientPortal: React.FC = () => {
                         value={relStreet}
                         onChange={(e) => setRelStreet(e.target.value)}
                         placeholder="e.g. 10 Marina Boulevard, Tower 2, Suite 39-01"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
 
@@ -3240,7 +3243,7 @@ export const ClientPortal: React.FC = () => {
                         value={relCity}
                         onChange={(e) => setRelCity(e.target.value)}
                         placeholder="City"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
 
@@ -3254,7 +3257,7 @@ export const ClientPortal: React.FC = () => {
                         value={relState}
                         onChange={(e) => setRelState(e.target.value)}
                         placeholder="State or Province"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
 
@@ -3268,7 +3271,7 @@ export const ClientPortal: React.FC = () => {
                         value={relPostal}
                         onChange={(e) => setRelPostal(e.target.value)}
                         placeholder="Postal or ZIP Code"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
 
@@ -3282,7 +3285,7 @@ export const ClientPortal: React.FC = () => {
                         value={relCountry}
                         onChange={(e) => setRelCountry(e.target.value)}
                         placeholder="e.g. Singapore / United States / Switzerland"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
 
@@ -3295,7 +3298,7 @@ export const ClientPortal: React.FC = () => {
                         value={relNotes}
                         onChange={(e) => setRelNotes(e.target.value)}
                         placeholder="Optional preferred delivery window, customs broker details, or building loading-bay clearance notes"
-                        className="w-full px-3 py-2 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-xs border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
                       />
                     </div>
                   </div>
@@ -3320,7 +3323,7 @@ export const ClientPortal: React.FC = () => {
                 <button
                   type="submit"
                   disabled={relBusy || !canSubmitRelease}
-                  className="w-full py-2.5 bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
+                  className="w-full py-3 sm:py-2.5 min-h-[44px] bg-[#C59B27] hover:bg-[#B38818] disabled:opacity-50 text-[#0A162B] font-bold text-sm rounded transition-colors"
                 >
                   {relBusy
                     ? 'Sending 6-Digit Email OTP...'
@@ -3341,32 +3344,32 @@ export const ClientPortal: React.FC = () => {
 
       {/* Full-Screen Photo Zoom Inspection Modal */}
       {lightboxMedia && (
-        <div className="fixed inset-0 z-50 bg-slate-950/90 flex flex-col p-4 sm:p-6">
-          <div className="max-w-6xl w-full mx-auto flex items-center justify-between gap-4 pb-3 text-white">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-slate-950/90 flex flex-col p-3 sm:p-6">
+          <div className="max-w-6xl w-full mx-auto flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 pb-3 text-white">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
                 {lightboxMedia.badge && (
-                  <span className="px-2 py-0.5 rounded bg-[#C59B27] text-[#0A162B] text-[11px] font-bold">
+                  <span className="px-2 py-0.5 rounded bg-[#C59B27] text-[#0A162B] text-[11px] font-bold shrink-0">
                     {lightboxMedia.badge}
                   </span>
                 )}
                 <h3 className="text-sm sm:text-base font-bold truncate">{lightboxMedia.title}</h3>
               </div>
               {lightboxMedia.subtitle && (
-                <p className="text-xs font-mono text-slate-300 mt-0.5">{lightboxMedia.subtitle}</p>
+                <p className="text-xs font-mono text-slate-300 mt-0.5 truncate">{lightboxMedia.subtitle}</p>
               )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={() => setLightboxZoomed(!lightboxZoomed)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs font-semibold"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs font-semibold"
               >
                 <ZoomIn className="w-3.5 h-3.5" />
                 <span>{lightboxZoomed ? '1x Fit' : '2x Zoom'}</span>
               </button>
               <button
                 onClick={() => triggerDownload(lightboxMedia.file_url, `${lightboxMedia.title}.jpg`)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download</span>
@@ -3399,10 +3402,10 @@ export const ClientPortal: React.FC = () => {
 
       {/* Document Preview Modal */}
       {previewDoc && (
-        <div className="fixed inset-0 z-50 bg-slate-900/75 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-md max-w-4xl w-full h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-            <div className="bg-[#0D1F3C] text-white px-5 py-3.5 flex items-center justify-between gap-4 shrink-0">
-              <div className="min-w-0">
+        <div className="fixed inset-0 z-50 bg-slate-900/75 flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white border border-slate-200 rounded-md w-[94vw] max-w-4xl h-[88vh] sm:h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+            <div className="bg-[#0D1F3C] text-white px-4 sm:px-5 py-3.5 flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 shrink-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-[11px] font-semibold text-[#F2D06B]">
                   {docBadgeLabel(previewDoc.category)}
                 </p>
@@ -3413,16 +3416,17 @@ export const ClientPortal: React.FC = () => {
                   href={previewDoc.file_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs font-semibold"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded text-xs font-semibold"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open in Tab</span>
+                  <span className="hidden sm:inline">Open in Tab</span>
+                  <span className="sm:hidden">Open</span>
                 </a>
                 <button
                   onClick={() =>
                     triggerDownload(previewDoc.file_url, previewDoc.file_name || previewDoc.title)
                   }
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-[#C59B27] text-[#0A162B] rounded text-xs font-bold"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download</span>
@@ -3446,20 +3450,20 @@ export const ClientPortal: React.FC = () => {
                   className="w-full h-full border-0"
                 />
               ) : (
-                <div className="h-full flex flex-col items-center justify-center p-8 text-center space-y-4">
+                <div className="h-full flex flex-col items-center justify-center p-6 sm:p-8 text-center space-y-4">
                   <FileText className="w-12 h-12 text-[#0D1F3C]" />
                   <div>
-                    <h4 className="text-base font-bold text-[#0D1F3C]">{previewDoc.title}</h4>
-                    <p className="text-xs text-slate-600 mt-1">
+                    <h4 className="text-base font-bold text-[#0D1F3C] break-words">{previewDoc.title}</h4>
+                    <p className="text-xs text-slate-600 mt-1 break-all">
                       {previewDoc.file_name || 'Custody Document'} · Ready to open or download
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex flex-wrap items-center justify-center gap-3 w-full sm:w-auto">
                     <a
                       href={previewDoc.file_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-4 py-2 bg-[#0D1F3C] text-white text-xs font-semibold rounded inline-flex items-center gap-1.5"
+                      className="w-full sm:w-auto px-4 py-2.5 sm:py-2 min-h-[42px] sm:min-h-0 bg-[#0D1F3C] text-white text-xs font-semibold rounded inline-flex items-center justify-center gap-1.5"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span>Open Document</span>
@@ -3468,7 +3472,7 @@ export const ClientPortal: React.FC = () => {
                       onClick={() =>
                         triggerDownload(previewDoc.file_url, previewDoc.file_name || previewDoc.title)
                       }
-                      className="px-4 py-2 bg-[#C59B27] text-[#0A162B] text-xs font-bold rounded inline-flex items-center gap-1.5"
+                      className="w-full sm:w-auto px-4 py-2.5 sm:py-2 min-h-[42px] sm:min-h-0 bg-[#C59B27] text-[#0A162B] text-xs font-bold rounded inline-flex items-center justify-center gap-1.5"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Download File</span>

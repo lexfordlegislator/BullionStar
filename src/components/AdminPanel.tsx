@@ -427,16 +427,16 @@ export const AdminPanel: React.FC = () => {
 
   if (!adminAuthenticated) {
     return (
-      <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-12">
+      <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
         <div className="max-w-md mx-auto bg-white border border-slate-200 rounded-md overflow-hidden shadow-sm">
-          <div className="bg-[#0A162B] px-6 py-5 text-white space-y-3">
+          <div className="bg-[#0A162B] px-5 sm:px-6 py-5 text-white space-y-3">
             <BullionStarLogo variant="dark" size="sm" />
             <div className="pt-1 border-t border-white/10">
               <div className="flex items-center gap-2 text-xs text-[#F2D06B] font-semibold mb-1">
                 <Shield className="w-4 h-4" />
                 <span>Vault &amp; Custody Operations Gate</span>
               </div>
-              <h1 className="font-serif text-2xl font-bold">Staff &amp; Vault Operations Login</h1>
+              <h1 className="font-serif text-xl sm:text-2xl font-bold">Staff &amp; Vault Operations Login</h1>
             </div>
           </div>
 
@@ -451,7 +451,7 @@ export const AdminPanel: React.FC = () => {
                 setAuthError(res.error || 'Invalid staff passcode.');
               }
             }}
-            className="p-6 space-y-4"
+            className="p-5 sm:p-6 space-y-4"
           >
             <p className="text-xs text-slate-600 leading-relaxed">
               Authorized custody personnel only. Enter the operations passcode to manage registered client balances and vault files in the Supabase <span className="font-mono">clients</span> table.
@@ -468,7 +468,7 @@ export const AdminPanel: React.FC = () => {
                 value={passcode}
                 onChange={(e) => setPasscode(e.target.value)}
                 placeholder="Enter passcode"
-                className="w-full px-3 py-2 text-sm font-mono border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
+                className="w-full px-3 py-2.5 sm:py-2 text-base sm:text-sm font-mono border border-slate-300 rounded focus:outline-none focus:border-[#0D1F3C]"
               />
             </div>
 
@@ -489,7 +489,7 @@ export const AdminPanel: React.FC = () => {
             <button
               type="submit"
               disabled={authBusy}
-              className="w-full py-2.5 bg-[#0D1F3C] hover:bg-[#193561] disabled:opacity-60 text-white font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3 sm:py-2.5 min-h-[44px] bg-[#0D1F3C] hover:bg-[#193561] disabled:opacity-60 text-white font-bold text-sm rounded transition-colors flex items-center justify-center gap-2"
             >
               <Lock className="w-4 h-4 text-[#F2D06B]" />
               <span>{authBusy ? 'Loading clients...' : 'Unlock Staff & Vault Operations'}</span>
@@ -523,17 +523,17 @@ export const AdminPanel: React.FC = () => {
   }
 
   return (
-    <section className="max-w-[1360px] mx-auto px-4 lg:px-6 py-8 space-y-6">
+    <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       {/* Header Banner */}
-      <div className="bg-[#0A162B] text-white rounded-md p-6 border border-[#1D3A68] flex flex-wrap items-center justify-between gap-4">
-        <div className="space-y-2.5">
+      <div className="bg-[#0A162B] text-white rounded-md p-4 sm:p-6 border border-[#1D3A68] flex flex-wrap items-center justify-between gap-4">
+        <div className="space-y-2.5 min-w-0">
           <BullionStarLogo variant="dark" size="sm" />
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-[#F2D06B] mb-1">
-              <Shield className="w-4 h-4" />
+              <Shield className="w-4 h-4 shrink-0" />
               <span>Staff &amp; Vault Operations · Supabase clients Table</span>
             </div>
-            <h1 className="font-serif text-2xl font-bold">Client Balances, Photos &amp; Custody Allocation</h1>
+            <h1 className="font-serif text-xl sm:text-2xl font-bold">Client Balances, Photos &amp; Custody Allocation</h1>
             <p className="text-xs text-slate-300 mt-1">
               Edit Cash ($), Gold (kg), Silver (kg), Diamond Carats, Diamond Value ($), and upload client intake photos or signed documents.
             </p>
@@ -599,7 +599,7 @@ export const AdminPanel: React.FC = () => {
           }}
           className="bg-white border border-slate-200 rounded p-5 flex flex-wrap items-end gap-4"
         >
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               New Operations Passcode
             </label>
@@ -610,10 +610,10 @@ export const AdminPanel: React.FC = () => {
               value={newPasscode}
               onChange={(e) => setNewPasscode(e.target.value)}
               placeholder="Minimum 4 characters"
-              className="px-3 py-2 text-xs font-mono border border-slate-300 rounded w-52"
+              className="px-3 py-2 text-base sm:text-xs font-mono border border-slate-300 rounded w-full sm:w-52"
             />
           </div>
-          <div>
+          <div className="w-full sm:w-auto">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Confirm New Passcode
             </label>
@@ -624,7 +624,7 @@ export const AdminPanel: React.FC = () => {
               value={confirmPasscode}
               onChange={(e) => setConfirmPasscode(e.target.value)}
               placeholder="Re-enter passcode"
-              className="px-3 py-2 text-xs font-mono border border-slate-300 rounded w-52"
+              className="px-3 py-2 text-base sm:text-xs font-mono border border-slate-300 rounded w-full sm:w-52"
             />
           </div>
           <button
@@ -683,14 +683,14 @@ export const AdminPanel: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative">
+          <div className="relative w-full sm:w-64">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search name, email, or vault ID..."
-              className="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded w-64 focus:outline-none focus:border-[#0D1F3C]"
+              className="pl-8 pr-3 py-2 sm:py-1.5 text-base sm:text-xs border border-slate-300 rounded w-full focus:outline-none focus:border-[#0D1F3C]"
             />
           </div>
         </div>

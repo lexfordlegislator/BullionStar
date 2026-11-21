@@ -79,10 +79,10 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
   const isUp = changePct >= 0;
 
   return (
-    <section className="max-w-[1360px] mx-auto px-4 lg:px-6 pt-10">
+    <section className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-10">
       <div className="bg-white border border-slate-200 rounded-md overflow-hidden">
         {/* Top Bar */}
-        <div className="px-5 py-4 bg-[#0D1F3C] text-white flex flex-wrap items-center justify-between gap-4">
+        <div className="px-4 sm:px-5 py-4 bg-[#0D1F3C] text-white flex flex-wrap items-center justify-between gap-3 sm:gap-4">
           <div>
             <h2 className="text-lg sm:text-xl font-bold">{t('charts.title')}</h2>
             <p className="text-xs text-slate-300 mt-0.5">
@@ -107,7 +107,7 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
 
         {/* Metal Selector + KPI Strip */}
         <div className="grid grid-cols-1 lg:grid-cols-12 border-b border-slate-200">
-          <div className="lg:col-span-5 flex border-b lg:border-b-0 lg:border-r border-slate-200 divide-x divide-slate-200">
+          <div className="lg:col-span-5 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-px bg-slate-200 border-b lg:border-b-0 lg:border-r border-slate-200">
             {(['Gold', 'Silver', 'Platinum', 'Palladium'] as const).map((m) => {
               const active = selectedMetal === m;
               const chg = spotChangesPct[m];
@@ -118,12 +118,12 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
                     onSelectMetal(m);
                     setHoverIdx(null);
                   }}
-                  className={`flex-1 px-3 py-3 text-start transition-colors ${
+                  className={`px-3.5 py-3 text-start transition-colors min-w-0 ${
                     active ? 'bg-[#F8FAFC] border-b-2 border-[#C59B27]' : 'bg-white hover:bg-slate-50'
                   }`}
                 >
-                  <div className="text-xs font-semibold text-[#0D1F3C]">{t(`metal.${m}`)}</div>
-                  <div className="text-xs font-mono font-bold text-slate-800 tabular-nums mt-0.5">
+                  <div className="text-xs font-semibold text-[#0D1F3C] truncate">{t(`metal.${m}`)}</div>
+                  <div className="text-xs font-mono font-bold text-slate-800 tabular-nums mt-0.5 truncate">
                     {sym}
                     {(convertFromUSD(spotPricesUSD[m]) * UNIT_MULTIPLIER[unit]).toLocaleString('en-US', {
                       minimumFractionDigits: 2,
@@ -144,13 +144,13 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
           </div>
 
           {/* Controls: Timeframe & Unit */}
-          <div className="lg:col-span-7 px-5 py-3 flex flex-wrap items-center justify-between gap-3 bg-[#F8FAFC]">
-            <div className="flex items-center gap-1 bg-white p-1 border border-slate-200 rounded">
+          <div className="lg:col-span-7 px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 bg-[#F8FAFC]">
+            <div className="flex flex-wrap items-center gap-1 bg-white p-1 border border-slate-200 rounded">
               {(['1D', '1W', '1M', '1Y', '5Y'] as Timeframe[]).map((tf) => (
                 <button
                   key={tf}
                   onClick={() => setTimeframe(tf)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-sm transition-colors ${
+                  className={`px-2.5 py-1.5 sm:py-1 text-xs font-semibold rounded-sm transition-colors ${
                     timeframe === tf ? 'bg-[#0D1F3C] text-white' : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -159,12 +159,12 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
               ))}
             </div>
 
-            <div className="flex items-center gap-1 bg-white p-1 border border-slate-200 rounded">
+            <div className="flex flex-wrap items-center gap-1 bg-white p-1 border border-slate-200 rounded">
               {(['oz', 'g', 'kg'] as WeightUnit[]).map((u) => (
                 <button
                   key={u}
                   onClick={() => setUnit(u)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-sm transition-colors ${
+                  className={`px-2.5 py-1.5 sm:py-1 text-xs font-semibold rounded-sm transition-colors ${
                     unit === u ? 'bg-[#C59B27] text-[#0A162B]' : 'text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -176,9 +176,9 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
         </div>
 
         {/* Active Metal Readout + Interactive Chart */}
-        <div className="p-5 sm:p-6">
-          <div className="flex flex-wrap items-baseline justify-between gap-4 mb-4">
-            <div className="flex items-baseline gap-3">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-3 sm:gap-4 mb-4">
+            <div className="flex flex-wrap items-baseline gap-2.5 sm:gap-3">
               <span className="text-2xl sm:text-3xl font-mono font-bold text-[#0D1F3C] tabular-nums">
                 {sym}
                 {(hoveredPoint ? hoveredPoint.value : currentVal).toLocaleString('en-US', {
@@ -202,7 +202,7 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
               </span>
             </div>
 
-            <div className="flex items-center gap-6 text-xs font-mono tabular-nums text-slate-600">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs font-mono tabular-nums text-slate-600">
               <div>
                 <span className="text-slate-400 me-1.5">{t('charts.periodHigh')}</span>
                 <strong className="text-slate-900">
@@ -229,7 +229,7 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
           </div>
 
           {/* Responsive SVG Chart */}
-          <div className="relative w-full h-[250px] bg-[#FAFBFD] border border-slate-200 rounded p-2">
+          <div className="relative w-full h-[210px] sm:h-[250px] bg-[#FAFBFD] border border-slate-200 rounded p-2">
             <svg
               viewBox={`0 0 ${width} ${height}`}
               preserveAspectRatio="none"
@@ -296,10 +296,17 @@ export const SpotCharts: React.FC<SpotChartsProps> = ({ selectedMetal, onSelectM
             </svg>
           </div>
 
-          <div className="flex items-center justify-between mt-2 px-1 text-[11px] font-mono text-slate-400">
-            {series.filter((_, idx) => idx % 2 === 0 || idx === series.length - 1).map((pt) => (
-              <span key={pt.label}>{pt.label}</span>
-            ))}
+          <div className="flex items-center justify-between gap-2 mt-2 px-1 text-[10px] sm:text-[11px] font-mono text-slate-400 overflow-hidden">
+            {series
+              .filter((_, idx) => idx % 2 === 0 || idx === series.length - 1)
+              .map((pt, filteredIdx, arr) => {
+                const showOnMobile = filteredIdx === 0 || filteredIdx === arr.length - 1 || filteredIdx % 2 === 0;
+                return (
+                  <span key={pt.label} className={showOnMobile ? 'inline truncate' : 'hidden sm:inline truncate'}>
+                    {pt.label}
+                  </span>
+                );
+              })}
           </div>
         </div>
       </div>

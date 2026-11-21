@@ -11,7 +11,7 @@ export const Footer: React.FC = () => {
 
   return (
     <footer className="bg-[#0A162B] text-slate-300 border-t border-[#1D3A68] no-print">
-      <div className="max-w-[1360px] mx-auto px-4 lg:px-6 py-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-sm">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 text-sm">
         <div>
           <div className="mb-3.5">
             <BullionStarLogo variant="dark" size="sm" />
@@ -154,7 +154,7 @@ export const Footer: React.FC = () => {
         </div>
       </div>
 
-      <div className="border-t border-[#1A2D4D] py-4 px-4 lg:px-6 text-xs text-slate-500 max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div className="border-t border-[#1A2D4D] py-4 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 max-w-[1360px] mx-auto flex flex-wrap items-center justify-between gap-3">
         <span onDoubleClick={openHiddenAdmin} className="select-none">
           {t('footer.copyright')}
         </span>
