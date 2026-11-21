@@ -1074,15 +1074,19 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const totalPortfolioUSD = useMemo(() => {
-    return Number(
+    const cashVal = Number(client.cash_usd || 0);
+    const holdingsVal = Number(
       (
-        Number(client.cash_usd || 0) +
         Number(client.gold_kg || 0) * spotPriceMap.Gold.kg +
         Number(client.silver_kg || 0) * spotPriceMap.Silver.kg +
         Number(client.diamond_value_usd || 0)
       ).toFixed(2)
     );
-  }, [client, spotPriceMap]);
+    if (isDemoMode) {
+      return Number((cashVal + holdingsVal).toFixed(2));
+    }
+    return Math.max(cashVal, holdingsVal);
+  }, [isDemoMode, client, spotPriceMap]);
 
   // Derive itemized holdings + unique quantity-matched vault verification photography per client
   const holdings: VaultHoldingItem[] = useMemo(() => {
@@ -1509,6 +1513,92 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { ok: true };
   };
 
+  const applyClientLedgerDelta = async (
+    targetClientId: string,
+    delta: {
+      cash_usd: number;
+      gold_kg: number;
+      silver_kg: number;
+      diamond_carats: number;
+      diamond_value_usd: number;
+    },
+    direction: 'refund' | 'deduct'
+  ): Promise<{ ok: boolean; error?: string; updatedClient?: ClientRow }> => {
+    if (!targetClientId) return { ok: false, error: 'Missing client ID for balance adjustment.' };
+    const { data: rows, error: fetchErr } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('id', targetClientId)
+      .limit(1);
+
+    if (fetchErr || !rows?.[0]) {
+      return {
+        ok: false,
+        error: fetchErr?.message || 'Unable to locate client balance record in Supabase.',
+      };
+    }
+
+    const cur = rows[0] as ClientRow;
+    const sign = direction === 'refund' ? 1 : -1;
+
+    const nextBalances = {
+      cash_usd: Math.max(0, Number(((Number(cur.cash_usd) || 0) + sign * (delta.cash_usd || 0)).toFixed(2))),
+      gold_kg: Math.max(0, Number(((Number(cur.gold_kg) || 0) + sign * (delta.gold_kg || 0)).toFixed(4))),
+      silver_kg: Math.max(0, Number(((Number(cur.silver_kg) || 0) + sign * (delta.silver_kg || 0)).toFixed(4))),
+      diamond_carats: Math.max(
+        0,
+        Number(((Number(cur.diamond_carats) || 0) + sign * (delta.diamond_carats || 0)).toFixed(2))
+      ),
+      diamond_value_usd: Math.max(
+        0,
+        Number(((Number(cur.diamond_value_usd) || 0) + sign * (delta.diamond_value_usd || 0)).toFixed(2))
+      ),
+    };
+
+    const { data: updatedRows, error: updErr } = await supabase
+      .from('clients')
+      .update(nextBalances)
+      .eq('id', targetClientId)
+      .select('*')
+      .limit(1);
+
+    if (updErr) {
+      return { ok: false, error: updErr.message };
+    }
+
+    const updatedClient: ClientRow = updatedRows?.[0]
+      ? ({
+          ...(updatedRows[0] as ClientRow),
+          uploaded_media: normalizeUploadedMedia((updatedRows[0] as ClientRow).uploaded_media),
+        } as ClientRow)
+      : { ...cur, ...nextBalances };
+
+    setAdminClients((prev) =>
+      prev.map((row) => (row.id === targetClientId ? updatedClient : row))
+    );
+    if (isLoggedIn && !isDemoMode && client.id === targetClientId) {
+      setClient(updatedClient);
+    }
+    return { ok: true, updatedClient };
+  };
+
+  const extractLedgerDeduction = (details?: Record<string, string> | null) => {
+    const d = details || {};
+    const active = d._ledger_deducted === 'true';
+    const refunded = d._ledger_refunded === 'true';
+    return {
+      active,
+      refunded,
+      delta: {
+        cash_usd: Math.max(0, Number(d._deducted_cash_usd || 0)),
+        gold_kg: Math.max(0, Number(d._deducted_gold_kg || 0)),
+        silver_kg: Math.max(0, Number(d._deducted_silver_kg || 0)),
+        diamond_carats: Math.max(0, Number(d._deducted_diamond_carats || 0)),
+        diamond_value_usd: Math.max(0, Number(d._deducted_diamond_value_usd || 0)),
+      },
+    };
+  };
+
   const verifyAndSubmitTransaction = async (
     otpCode: string,
     draft: PendingVaultTransactionDraft
@@ -1537,6 +1627,217 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return { ok: false, error: otpErr.message };
       }
 
+      // Compute & apply immediate balance deductions for Cash Withdrawal & Physical Metal Release
+      let ledgerAccountDetails: Record<string, string> = { ...(draft.account_details || {}) };
+      let effectiveAmountUsd = Number(draft.amount_usd) || 0;
+      let rollbackBalances: {
+        cash_usd: number;
+        gold_kg: number;
+        silver_kg: number;
+        diamond_carats: number;
+        diamond_value_usd: number;
+      } | null = null;
+      let latestUpdatedClient: ClientRow | null = null;
+
+      if (
+        draft.tx_type === 'Cash Withdrawal' ||
+        draft.tx_type === 'Physical Metal Release'
+      ) {
+        const { data: freshRows, error: freshErr } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', client.id)
+          .limit(1);
+
+        if (freshErr || !freshRows?.[0]) {
+          return {
+            ok: false,
+            error: freshErr?.message || 'Unable to verify current account balance in database.',
+          };
+        }
+
+        const freshClient = freshRows[0] as ClientRow;
+        const curCash = Number(freshClient.cash_usd || 0);
+        const curGold = Number(freshClient.gold_kg || 0);
+        const curSilver = Number(freshClient.silver_kg || 0);
+        const curDiaCt = Number(freshClient.diamond_carats || 0);
+        const curDiaVal = Number(freshClient.diamond_value_usd || 0);
+
+        const goldSpotKg = spotPriceMap.Gold.kg > 0 ? spotPriceMap.Gold.kg : 86871.3;
+        const silverSpotKg = spotPriceMap.Silver.kg > 0 ? spotPriceMap.Silver.kg : 1077.05;
+
+        let deductedCash = 0;
+        let deductedGoldKg = 0;
+        let deductedSilverKg = 0;
+        let deductedDiaCt = 0;
+        let deductedDiaVal = 0;
+
+        if (draft.tx_type === 'Cash Withdrawal') {
+          const withdrawUSD = Number((Number(draft.amount_usd) || 0).toFixed(2));
+          if (withdrawUSD <= 0) {
+            return { ok: false, error: 'Withdrawal amount must be greater than zero.' };
+          }
+          if (withdrawUSD > curCash + 0.01) {
+            return {
+              ok: false,
+              error: `Insufficient withdrawable cash balance (${formatMoney(curCash)} available).`,
+            };
+          }
+
+          deductedCash = Math.min(curCash, withdrawUSD);
+
+          // Deduct standalone cash buffer first (if any), then proportionally reduce backing metals at live spot prices
+          const holdingsValUSD = Number(
+            (curGold * goldSpotKg + curSilver * silverSpotKg + curDiaVal).toFixed(2)
+          );
+          const standaloneCashBuffer = Math.max(
+            0,
+            Number((curCash - holdingsValUSD).toFixed(2))
+          );
+          let metalBackedRemainingUSD = Math.max(
+            0,
+            Number((deductedCash - standaloneCashBuffer).toFixed(2))
+          );
+
+          if (metalBackedRemainingUSD > 0.01 && curGold > 0) {
+            const maxGoldUSD = curGold * goldSpotKg;
+            const goldDeductUSD = Math.min(metalBackedRemainingUSD, maxGoldUSD);
+            deductedGoldKg = Math.min(
+              curGold,
+              Number((goldDeductUSD / goldSpotKg).toFixed(4))
+            );
+            metalBackedRemainingUSD = Math.max(
+              0,
+              Number((metalBackedRemainingUSD - goldDeductUSD).toFixed(2))
+            );
+          }
+
+          if (metalBackedRemainingUSD > 0.01 && curSilver > 0) {
+            const maxSilverUSD = curSilver * silverSpotKg;
+            const silverDeductUSD = Math.min(metalBackedRemainingUSD, maxSilverUSD);
+            deductedSilverKg = Math.min(
+              curSilver,
+              Number((silverDeductUSD / silverSpotKg).toFixed(4))
+            );
+            metalBackedRemainingUSD = Math.max(
+              0,
+              Number((metalBackedRemainingUSD - silverDeductUSD).toFixed(2))
+            );
+          }
+
+          if (metalBackedRemainingUSD > 0.01 && curDiaVal > 0) {
+            const diaDeductUSD = Math.min(metalBackedRemainingUSD, curDiaVal);
+            deductedDiaVal = Number(diaDeductUSD.toFixed(2));
+            if (curDiaCt > 0) {
+              deductedDiaCt = Math.min(
+                curDiaCt,
+                Number(((diaDeductUSD / curDiaVal) * curDiaCt).toFixed(2))
+              );
+            }
+          }
+
+          effectiveAmountUsd = deductedCash;
+        } else {
+          // Physical Metal Release
+          const metalType = String(draft.account_details?.metal_type || '').toLowerCase();
+          const rawQty =
+            Number(draft.account_details?.release_qty_num) ||
+            Number(String(draft.account_details?.release_quantity || '').replace(/[^\d.]/g, '')) ||
+            0;
+
+          if (rawQty <= 0) {
+            return { ok: false, error: 'Physical release quantity must be greater than zero.' };
+          }
+
+          let releaseMarketUSD = 0;
+
+          if (metalType.includes('gold')) {
+            if (rawQty > curGold + 0.0001) {
+              return {
+                ok: false,
+                error: `Insufficient Gold in vault (${curGold.toFixed(3)} kg available).`,
+              };
+            }
+            deductedGoldKg = Math.min(curGold, Number(rawQty.toFixed(4)));
+            releaseMarketUSD = Number((deductedGoldKg * goldSpotKg).toFixed(2));
+          } else if (metalType.includes('silver')) {
+            if (rawQty > curSilver + 0.0001) {
+              return {
+                ok: false,
+                error: `Insufficient Silver in vault (${curSilver.toFixed(3)} kg available).`,
+              };
+            }
+            deductedSilverKg = Math.min(curSilver, Number(rawQty.toFixed(4)));
+            releaseMarketUSD = Number((deductedSilverKg * silverSpotKg).toFixed(2));
+          } else {
+            if (rawQty > curDiaCt + 0.001) {
+              return {
+                ok: false,
+                error: `Insufficient GIA Diamonds in vault (${curDiaCt.toFixed(2)} ct available).`,
+              };
+            }
+            deductedDiaCt = Math.min(curDiaCt, Number(rawQty.toFixed(2)));
+            deductedDiaVal =
+              curDiaCt > 0
+                ? Math.min(curDiaVal, Number(((deductedDiaCt / curDiaCt) * curDiaVal).toFixed(2)))
+                : Number((Number(draft.amount_usd) || 0).toFixed(2));
+            releaseMarketUSD =
+              deductedDiaVal > 0 ? deductedDiaVal : Number((Number(draft.amount_usd) || 0).toFixed(2));
+          }
+
+          deductedCash = Math.min(curCash, releaseMarketUSD);
+          effectiveAmountUsd = releaseMarketUSD;
+        }
+
+        const nextClientBalances = {
+          cash_usd: Math.max(0, Number((curCash - deductedCash).toFixed(2))),
+          gold_kg: Math.max(0, Number((curGold - deductedGoldKg).toFixed(4))),
+          silver_kg: Math.max(0, Number((curSilver - deductedSilverKg).toFixed(4))),
+          diamond_carats: Math.max(0, Number((curDiaCt - deductedDiaCt).toFixed(2))),
+          diamond_value_usd: Math.max(0, Number((curDiaVal - deductedDiaVal).toFixed(2))),
+        };
+
+        rollbackBalances = {
+          cash_usd: curCash,
+          gold_kg: curGold,
+          silver_kg: curSilver,
+          diamond_carats: curDiaCt,
+          diamond_value_usd: curDiaVal,
+        };
+
+        const { data: deductedClientRows, error: deductErr } = await supabase
+          .from('clients')
+          .update(nextClientBalances)
+          .eq('id', client.id)
+          .select('*')
+          .limit(1);
+
+        if (deductErr) {
+          return {
+            ok: false,
+            error: `Failed to reserve client vault balances (${deductErr.message}).`,
+          };
+        }
+
+        latestUpdatedClient = deductedClientRows?.[0]
+          ? ({
+              ...(deductedClientRows[0] as ClientRow),
+              uploaded_media: normalizeUploadedMedia((deductedClientRows[0] as ClientRow).uploaded_media),
+            } as ClientRow)
+          : { ...freshClient, ...nextClientBalances };
+
+        ledgerAccountDetails = {
+          ...ledgerAccountDetails,
+          _ledger_deducted: 'true',
+          _ledger_refunded: 'false',
+          _deducted_cash_usd: String(deductedCash),
+          _deducted_gold_kg: String(deductedGoldKg),
+          _deducted_silver_kg: String(deductedSilverKg),
+          _deducted_diamond_carats: String(deductedDiaCt),
+          _deducted_diamond_value_usd: String(deductedDiaVal),
+        };
+      }
+
       const txId =
         typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()
@@ -1550,10 +1851,10 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         vault_id: client.vault_id || '',
         tx_type: draft.tx_type,
         asset_summary: draft.asset_summary,
-        amount_usd: Number(draft.amount_usd) || 0,
+        amount_usd: effectiveAmountUsd,
         currency: draft.currency || 'USD',
         settlement_rail: draft.settlement_rail,
-        account_details: draft.account_details,
+        account_details: ledgerAccountDetails,
         status: 'Pending' as const,
         created_at: new Date().toISOString(),
       };
@@ -1565,10 +1866,20 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .limit(1);
 
       if (insertErr) {
+        if (rollbackBalances) {
+          await supabase.from('clients').update(rollbackBalances).eq('id', client.id);
+        }
         return {
           ok: false,
           error: `OTP verified, but saving to vault_transactions failed (${insertErr.message}). Please ensure the "vault_transactions" table and policies are created in Supabase.`,
         };
+      }
+
+      if (latestUpdatedClient) {
+        setClient(latestUpdatedClient);
+        setAdminClients((prev) =>
+          prev.map((row) => (row.id === client.id ? latestUpdatedClient! : row))
+        );
       }
 
       const savedRow = inserted?.[0]
@@ -1579,6 +1890,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (draft.sendEmailToTreasury) {
         try {
           const detailLines = Object.entries(draft.account_details || {})
+            .filter(([k]) => !k.startsWith('_'))
             .map(([k, v]) => `${k}: ${v}`)
             .join('\n');
           await fetch('https://api.web3forms.com/submit', {
@@ -1662,10 +1974,27 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (error) {
       return { ok: false, error: error.message };
     }
+    if (!data?.[0]) {
+      return { ok: false, error: 'Transaction is no longer Pending and cannot be cancelled.' };
+    }
 
-    const updatedRow = data?.[0]
-      ? normalizeTransactionRow(data[0] as Record<string, unknown>)
-      : { ...existing, status: 'Cancelled' };
+    let updatedRow = normalizeTransactionRow(data[0] as Record<string, unknown>);
+    const ledger = extractLedgerDeduction(updatedRow.account_details);
+
+    if (ledger.active && !ledger.refunded) {
+      const refundRes = await applyClientLedgerDelta(client.id, ledger.delta, 'refund');
+      if (refundRes.ok) {
+        const nextDetails = {
+          ...(updatedRow.account_details || {}),
+          _ledger_refunded: 'true',
+        };
+        await supabase
+          .from('vault_transactions')
+          .update({ account_details: nextDetails })
+          .eq('id', txId);
+        updatedRow = { ...updatedRow, account_details: nextDetails };
+      }
+    }
 
     setTransactions((prev) =>
       prev.map((row) => (row.id === txId ? updatedRow : row))
@@ -1676,10 +2005,17 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     pushLocalNotification(
       `${existing.tx_type} Cancelled`,
-      `Request ${existing.id.slice(0, 8)} was cancelled by client.`,
+      ledger.active && !ledger.refunded
+        ? `Request ${existing.id.slice(0, 8)} cancelled — deducted cash and metal balances were automatically refunded.`
+        : `Request ${existing.id.slice(0, 8)} was cancelled by client.`,
       'Portfolio'
     );
-    pushToast('Request Cancelled', `${existing.tx_type} status updated to Cancelled.`);
+    pushToast(
+      'Request Cancelled',
+      ledger.active && !ledger.refunded
+        ? `${existing.tx_type} cancelled and balances automatically restored.`
+        : `${existing.tx_type} status updated to Cancelled.`
+    );
     return { ok: true };
   };
 
@@ -1735,9 +2071,69 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     txId: string,
     nextStatus: VaultTransactionStatus
   ) => {
+    // Query authoritative row first so ledger refund/re-deduction state is exact
+    const { data: currentRows, error: fetchErr } = await supabase
+      .from('vault_transactions')
+      .select('*')
+      .eq('id', txId)
+      .limit(1);
+
+    if (fetchErr) {
+      return { ok: false, error: fetchErr.message };
+    }
+
+    const currentTx = currentRows?.[0]
+      ? normalizeTransactionRow(currentRows[0] as Record<string, unknown>)
+      : adminTransactions.find((row) => row.id === txId) || null;
+
+    let nextDetails: Record<string, string> | undefined = currentTx?.account_details
+      ? { ...currentTx.account_details }
+      : undefined;
+
+    if (currentTx && currentTx.client_id) {
+      const ledger = extractLedgerDeduction(currentTx.account_details);
+      if (nextStatus === 'Declined' && ledger.active && !ledger.refunded) {
+        const refundRes = await applyClientLedgerDelta(
+          currentTx.client_id,
+          ledger.delta,
+          'refund'
+        );
+        if (!refundRes.ok) {
+          return {
+            ok: false,
+            error: `Failed to refund client balances before declining (${refundRes.error}).`,
+          };
+        }
+        nextDetails = { ...(nextDetails || {}), _ledger_refunded: 'true' };
+      } else if (
+        (nextStatus === 'Pending' || nextStatus === 'Completed') &&
+        currentTx.status === 'Declined' &&
+        ledger.active &&
+        ledger.refunded
+      ) {
+        const deductRes = await applyClientLedgerDelta(
+          currentTx.client_id,
+          ledger.delta,
+          'deduct'
+        );
+        if (!deductRes.ok) {
+          return {
+            ok: false,
+            error: `Failed to re-apply balance deduction (${deductRes.error}).`,
+          };
+        }
+        nextDetails = { ...(nextDetails || {}), _ledger_refunded: 'false' };
+      }
+    }
+
+    const updatePayload: Record<string, unknown> = { status: nextStatus };
+    if (nextDetails) {
+      updatePayload.account_details = nextDetails;
+    }
+
     const { data, error } = await supabase
       .from('vault_transactions')
-      .update({ status: nextStatus })
+      .update(updatePayload)
       .eq('id', txId)
       .select('*')
       .limit(1);
@@ -1750,8 +2146,8 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ? normalizeTransactionRow(data[0] as Record<string, unknown>)
       : null;
 
-    const existingTx = adminTransactions.find((row) => row.id === txId) || null;
-    const targetTx = updatedTx || existingTx;
+    const existingTx = adminTransactions.find((row) => row.id === txId) || currentTx;
+    const targetTx = updatedTx || (existingTx ? { ...existingTx, status: nextStatus } : null);
 
     setAdminTransactions((prev) =>
       prev.map((row) =>
@@ -1805,7 +2201,12 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     }
 
-    pushToast('Status Updated', `Transaction status changed to ${nextStatus}.`);
+    pushToast(
+      'Status Updated',
+      nextStatus === 'Declined' && currentTx && extractLedgerDeduction(currentTx.account_details).active
+        ? `Transaction Declined and reserved client balances automatically refunded.`
+        : `Transaction status changed to ${nextStatus}.`
+    );
     return { ok: true };
   };
 

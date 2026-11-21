@@ -74,6 +74,7 @@ export const AdminPanel: React.FC = () => {
     adminTransactions,
     adminTxLoading,
     adminTxError,
+    spotPriceMap,
     adminLogin,
     adminLogout,
     adminUpdatePasscode,
@@ -101,9 +102,22 @@ export const AdminPanel: React.FC = () => {
 
   // Draft input values keyed by client.id
   const [drafts, setDrafts] = useState<Record<string, AdminClientBalanceUpdate>>({});
+  const [extraCashOffsets, setExtraCashOffsets] = useState<Record<string, number>>({});
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+
+  const calcHoldingsValuation = (d: {
+    gold_kg: number;
+    silver_kg: number;
+    diamond_value_usd: number;
+  }) => {
+    const goldVal = Number(((Number(d.gold_kg) || 0) * spotPriceMap.Gold.kg).toFixed(2));
+    const silverVal = Number(((Number(d.silver_kg) || 0) * spotPriceMap.Silver.kg).toFixed(2));
+    const diamondVal = Number((Number(d.diamond_value_usd) || 0).toFixed(2));
+    const totalVal = Number((goldVal + silverVal + diamondVal).toFixed(2));
+    return { goldVal, silverVal, diamondVal, totalVal };
+  };
 
   // Per-client Photos & Documents Manager state
   const [selectedMediaClientId, setSelectedMediaClientId] = useState<string>('');
@@ -126,16 +140,21 @@ export const AdminPanel: React.FC = () => {
 
   useEffect(() => {
     const nextDrafts: Record<string, AdminClientBalanceUpdate> = {};
+    const nextOffsets: Record<string, number> = {};
     adminClients.forEach((c) => {
-      nextDrafts[c.id] = {
+      const d = {
         cash_usd: Number(c.cash_usd) || 0,
         gold_kg: Number(c.gold_kg) || 0,
         silver_kg: Number(c.silver_kg) || 0,
         diamond_carats: Number(c.diamond_carats) || 0,
         diamond_value_usd: Number(c.diamond_value_usd) || 0,
       };
+      nextDrafts[c.id] = d;
+      const hVal = calcHoldingsValuation(d).totalVal;
+      nextOffsets[c.id] = d.cash_usd <= 0 ? 0 : Number((d.cash_usd - hVal).toFixed(2));
     });
     setDrafts(nextDrafts);
+    setExtraCashOffsets(nextOffsets);
   }, [adminClients]);
 
   useEffect(() => {
@@ -234,21 +253,58 @@ export const AdminPanel: React.FC = () => {
     field: keyof AdminClientBalanceUpdate,
     value: string
   ) => {
-    const num = value === '' ? 0 : Number(value);
+    const rawNum = value === '' ? 0 : Number(value);
+    const cleanNum = Number.isNaN(rawNum) ? 0 : Math.max(0, rawNum);
     setSavedIds((prev) => ({ ...prev, [clientId]: false }));
     setRowErrors((prev) => ({ ...prev, [clientId]: '' }));
+
+    const currentDraft = drafts[clientId] || {
+      cash_usd: 0,
+      gold_kg: 0,
+      silver_kg: 0,
+      diamond_carats: 0,
+      diamond_value_usd: 0,
+    };
+
+    if (field === 'cash_usd') {
+      const currentHoldingsVal = calcHoldingsValuation(currentDraft).totalVal;
+      setExtraCashOffsets((prev) => ({
+        ...prev,
+        [clientId]: Number((cleanNum - currentHoldingsVal).toFixed(2)),
+      }));
+      setDrafts((prev) => ({
+        ...prev,
+        [clientId]: { ...currentDraft, cash_usd: cleanNum },
+      }));
+      return;
+    }
+
+    const updatedDraft: AdminClientBalanceUpdate = {
+      ...currentDraft,
+      [field]: cleanNum,
+    };
+
+    if (field === 'gold_kg' || field === 'silver_kg' || field === 'diamond_value_usd') {
+      const newHoldingsVal = calcHoldingsValuation(updatedDraft).totalVal;
+      const extraOffset = extraCashOffsets[clientId] ?? 0;
+      updatedDraft.cash_usd = Math.max(0, Number((newHoldingsVal + extraOffset).toFixed(2)));
+    }
+
     setDrafts((prev) => ({
       ...prev,
-      [clientId]: {
-        ...(prev[clientId] || {
-          cash_usd: 0,
-          gold_kg: 0,
-          silver_kg: 0,
-          diamond_carats: 0,
-          diamond_value_usd: 0,
-        }),
-        [field]: Number.isNaN(num) ? 0 : num,
-      },
+      [clientId]: updatedDraft,
+    }));
+  };
+
+  const syncRowCashToSpot = (clientId: string) => {
+    const curDraft = drafts[clientId];
+    if (!curDraft) return;
+    const hVal = calcHoldingsValuation(curDraft).totalVal;
+    setSavedIds((prev) => ({ ...prev, [clientId]: false }));
+    setExtraCashOffsets((prev) => ({ ...prev, [clientId]: 0 }));
+    setDrafts((prev) => ({
+      ...prev,
+      [clientId]: { ...curDraft, cash_usd: hVal },
     }));
   };
 
@@ -567,11 +623,30 @@ export const AdminPanel: React.FC = () => {
       {/* Clients Table */}
       <div className="bg-white border border-slate-200 rounded overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#B38818]" />
-            <h2 className="text-base font-bold text-[#0D1F3C]">
-              Registered Clients ({adminClients.length})
-            </h2>
+          <div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-[#B38818]" />
+              <h2 className="text-base font-bold text-[#0D1F3C]">
+                Registered Clients ({adminClients.length})
+              </h2>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px] font-mono text-slate-600">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#FAF7EC] border border-[#C59B27]/40 text-[#0D1F3C] font-semibold">
+                Live Gold Spot: ${spotPriceMap.Gold.kg.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg
+                <span className="text-slate-500 font-normal">
+                  (${spotPriceMap.Gold.oz.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/oz)
+                </span>
+              </span>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[#0D1F3C] font-semibold">
+                Live Silver Spot: ${spotPriceMap.Silver.kg.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg
+                <span className="text-slate-500 font-normal">
+                  (${spotPriceMap.Silver.oz.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/oz)
+                </span>
+              </span>
+              <span className="text-slate-500 font-sans">
+                Editing weights auto-updates Cash / Portfolio Balance ($)
+              </span>
+            </div>
           </div>
 
           <div className="relative">
@@ -591,7 +666,7 @@ export const AdminPanel: React.FC = () => {
             <thead className="bg-[#F8FAFC] text-slate-600 border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4 text-left font-semibold">Client Name &amp; Email</th>
-                <th className="py-3 px-3 text-left font-semibold">Cash ($)</th>
+                <th className="py-3 px-3 text-left font-semibold">Cash / Portfolio Balance ($)</th>
                 <th className="py-3 px-3 text-left font-semibold">Gold (kg)</th>
                 <th className="py-3 px-3 text-left font-semibold">Silver (kg)</th>
                 <th className="py-3 px-3 text-left font-semibold">Diamond Carats</th>
@@ -608,6 +683,9 @@ export const AdminPanel: React.FC = () => {
                   diamond_carats: Number(c.diamond_carats) || 0,
                   diamond_value_usd: Number(c.diamond_value_usd) || 0,
                 };
+                const valuation = calcHoldingsValuation(draft);
+                const cashOffset = Number((draft.cash_usd - valuation.totalVal).toFixed(2));
+                const showSyncBtn = Math.abs(cashOffset) >= 0.01 && valuation.totalVal > 0;
                 const isSaving = savingId === c.id;
                 const isSaved = Boolean(savedIds[c.id]);
                 const rowErr = rowErrors[c.id];
@@ -617,16 +695,83 @@ export const AdminPanel: React.FC = () => {
                 return (
                   <tr
                     key={c.id}
-                    className={`align-middle transition-colors ${
+                    className={`align-top transition-colors ${
                       isMediaSelected ? 'bg-[#FFFDF5]' : 'hover:bg-[#FAFBFD]'
                     }`}
                   >
-                    <td className="py-3.5 px-4 min-w-[210px]">
+                    <td className="py-3.5 px-4 min-w-[240px]">
                       <div className="font-bold text-sm text-[#0D1F3C]">{c.full_name}</div>
                       <div className="text-slate-600 font-medium">{c.email}</div>
                       <div className="text-[11px] font-mono text-slate-400 mt-0.5">
                         {c.vault_id} · {c.country}
                       </div>
+
+                      {/* Live Spot Price Breakdown */}
+                      <div className="mt-2 bg-[#F8FAFC] border border-slate-200 rounded p-2 space-y-0.5 text-[11px]">
+                        <div className="font-semibold text-[#0D1F3C]">
+                          Live Spot Breakdown:
+                        </div>
+                        {draft.gold_kg > 0 && (
+                          <div className="font-mono text-slate-700">
+                            {draft.gold_kg.toFixed(2)} kg Gold @ $
+                            {spotPriceMap.Gold.kg.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                            /kg ={' '}
+                            <span className="font-bold text-[#0D1F3C]">
+                              $
+                              {valuation.goldVal.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        {draft.silver_kg > 0 && (
+                          <div className="font-mono text-slate-700">
+                            {draft.silver_kg.toFixed(2)} kg Silver @ $
+                            {spotPriceMap.Silver.kg.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                            /kg ={' '}
+                            <span className="font-bold text-[#0D1F3C]">
+                              $
+                              {valuation.silverVal.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        {valuation.diamondVal > 0 && (
+                          <div className="font-mono text-slate-700">
+                            {draft.diamond_carats.toFixed(2)} ct Diamonds ={' '}
+                            <span className="font-bold text-[#0D1F3C]">
+                              $
+                              {valuation.diamondVal.toLocaleString('en-US', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        {valuation.totalVal === 0 && (
+                          <div className="text-slate-400 italic">No precious metals held</div>
+                        )}
+                        {Math.abs(cashOffset) >= 0.01 && (
+                          <div className="font-mono text-[10px] text-[#9A720F] pt-0.5 border-t border-slate-200">
+                            {cashOffset > 0 ? '+' : ''}
+                            ${cashOffset.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}{' '}
+                            standalone cash / override
+                          </div>
+                        )}
+                      </div>
+
                       {rowErr && (
                         <div className="text-[11px] text-rose-700 mt-1">{rowErr}</div>
                       )}
@@ -640,8 +785,22 @@ export const AdminPanel: React.FC = () => {
                         aria-label={`Cash USD for ${c.full_name}`}
                         value={draft.cash_usd}
                         onChange={(e) => updateDraftField(c.id, 'cash_usd', e.target.value)}
-                        className="w-28 px-2.5 py-2 text-xs font-mono font-semibold border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
+                        className="w-32 px-2.5 py-2 text-xs font-mono font-semibold border border-slate-300 rounded bg-white focus:outline-none focus:border-[#0D1F3C]"
                       />
+                      {showSyncBtn && (
+                        <button
+                          type="button"
+                          onClick={() => syncRowCashToSpot(c.id)}
+                          className="mt-1 block text-[10px] font-bold text-[#B38818] hover:underline"
+                        >
+                          Sync to Spot ($
+                          {valuation.totalVal.toLocaleString('en-US', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                          )
+                        </button>
+                      )}
                     </td>
 
                     <td className="py-3 px-3">
@@ -882,9 +1041,16 @@ export const AdminPanel: React.FC = () => {
                 const actionErr = txActionErrors[tx.id];
                 const accountEntries = tx.account_details
                   ? Object.entries(tx.account_details).filter(
-                      ([, val]) => val !== undefined && val !== null && String(val).trim() !== ''
+                      ([key, val]) =>
+                        !key.startsWith('_') &&
+                        key !== 'release_qty_num' &&
+                        val !== undefined &&
+                        val !== null &&
+                        String(val).trim() !== ''
                     )
                   : [];
+                const ledgerActive = tx.account_details?._ledger_deducted === 'true';
+                const ledgerRefunded = tx.account_details?._ledger_refunded === 'true';
 
                 return (
                   <tr key={tx.id} className="align-top hover:bg-[#FAFBFD] transition-colors">
@@ -933,6 +1099,17 @@ export const AdminPanel: React.FC = () => {
                           </span>
                         )}
                       </div>
+                      {ledgerActive && (
+                        <div
+                          className={`mt-1 inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                            ledgerRefunded
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}
+                        >
+                          {ledgerRefunded ? 'Balances Refunded' : 'Balances Deducted'}
+                        </div>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-3 min-w-[290px] max-w-[400px]">

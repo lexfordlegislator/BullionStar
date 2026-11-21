@@ -264,15 +264,19 @@ export const ClientPortal: React.FC = () => {
   const goldValueUSD = Number((goldKg * spotPriceMap.Gold.kg).toFixed(2));
   const silverValueUSD = Number((silverKg * spotPriceMap.Silver.kg).toFixed(2));
 
+  const standaloneCashUSD = isDemoMode
+    ? cashUSD
+    : Math.max(0, Number((cashUSD - (goldValueUSD + silverValueUSD + diamondValueUSD)).toFixed(2)));
+
   const categoryBreakdown = useMemo(() => {
     const entries: [string, number][] = [
-      ['Cash (USD)', cashUSD],
+      ['Cash (USD)', standaloneCashUSD],
       ['Gold', goldValueUSD],
       ['Silver', silverValueUSD],
       ['Certified Diamonds', diamondValueUSD],
     ];
     return entries.filter(([, v]) => v > 0);
-  }, [cashUSD, goldValueUSD, silverValueUSD, diamondValueUSD]);
+  }, [standaloneCashUSD, goldValueUSD, silverValueUSD, diamondValueUSD]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -1480,7 +1484,12 @@ export const ClientPortal: React.FC = () => {
                         ? t('status.Cancelled')
                         : st;
                     const detailEntries = tx.account_details
-                      ? Object.entries(tx.account_details).filter(([, val]) => String(val).trim() !== '')
+                      ? Object.entries(tx.account_details).filter(
+                          ([key, val]) =>
+                            !key.startsWith('_') &&
+                            key !== 'release_qty_num' &&
+                            String(val).trim() !== ''
+                        )
                       : [];
                     return (
                       <tr key={tx.id} className="hover:bg-[#F8FAFC] align-top">
@@ -2131,14 +2140,59 @@ export const ClientPortal: React.FC = () => {
                   </div>
                 </div>
 
-                {fundingAction === 'Withdraw' && (
-                  <div className="bg-[#F8FAFC] border border-slate-200 rounded px-3.5 py-2.5 flex items-center justify-between text-xs">
-                    <span className="text-slate-600">Available Withdrawable Cash</span>
-                    <span className="font-mono font-bold text-[#0D1F3C] tabular-nums">
-                      {formatMoney(cashUSD)}
-                    </span>
-                  </div>
-                )}
+                {fundingAction === 'Withdraw' && (() => {
+                  const estAfterCash = Math.max(0, Number((cashUSD - amtUSD).toFixed(2)));
+                  const metalBackedReq = Math.max(0, Number((amtUSD - standaloneCashUSD).toFixed(2)));
+                  let estGoldDrop = 0;
+                  let estSilverDrop = 0;
+                  let remUSD = metalBackedReq;
+                  if (remUSD > 0.01 && goldKg > 0 && spotPriceMap.Gold.kg > 0) {
+                    const gUsd = Math.min(remUSD, goldKg * spotPriceMap.Gold.kg);
+                    estGoldDrop = Math.min(goldKg, Number((gUsd / spotPriceMap.Gold.kg).toFixed(4)));
+                    remUSD = Math.max(0, remUSD - gUsd);
+                  }
+                  if (remUSD > 0.01 && silverKg > 0 && spotPriceMap.Silver.kg > 0) {
+                    const sUsd = Math.min(remUSD, silverKg * spotPriceMap.Silver.kg);
+                    estSilverDrop = Math.min(silverKg, Number((sUsd / spotPriceMap.Silver.kg).toFixed(4)));
+                  }
+
+                  return (
+                    <div className="bg-[#F8FAFC] border border-slate-200 rounded px-3.5 py-2.5 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Available Withdrawable Cash</span>
+                        <span className="font-mono font-bold text-[#0D1F3C] tabular-nums">
+                          {formatMoney(cashUSD)}
+                        </span>
+                      </div>
+                      {amtUSD > 0 && amtUSD <= cashUSD && (
+                        <div className="pt-1.5 border-t border-slate-200 space-y-1 text-[11px] text-slate-600">
+                          <div className="flex items-center justify-between">
+                            <span>Projected Cash Balance After Request:</span>
+                            <span className="font-mono font-bold text-[#0D1F3C]">
+                              {formatMoney(estAfterCash)}
+                            </span>
+                          </div>
+                          {estGoldDrop > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span>Backing Gold Adjustment (Live Spot):</span>
+                              <span className="font-mono font-semibold text-amber-800">
+                                -{estGoldDrop.toFixed(3)} kg → {(goldKg - estGoldDrop).toFixed(3)} kg
+                              </span>
+                            </div>
+                          )}
+                          {estSilverDrop > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span>Backing Silver Adjustment (Live Spot):</span>
+                              <span className="font-mono font-semibold text-amber-800">
+                                -{estSilverDrop.toFixed(3)} kg → {(silverKg - estSilverDrop).toFixed(3)} kg
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -2828,12 +2882,14 @@ export const ClientPortal: React.FC = () => {
           assetOptions.find((a) => a.id === releaseAsset) || assetOptions[0];
         const qtyNum = Number(releaseQuantity) || 0;
         const exceedsBalance = qtyNum > selectedOption.available;
+        const clampedQty = Math.min(qtyNum, selectedOption.available);
         const estReleaseUSD =
-          selectedOption.available > 0 && qtyNum > 0
-            ? Number(
-                ((Math.min(qtyNum, selectedOption.available) / selectedOption.available) *
-                  selectedOption.usdTotal).toFixed(2)
-              )
+          selectedOption.available > 0 && clampedQty > 0
+            ? selectedOption.id === 'Gold Bullion'
+              ? Number((clampedQty * spotPriceMap.Gold.kg).toFixed(2))
+              : selectedOption.id === 'Silver Bullion'
+              ? Number((clampedQty * spotPriceMap.Silver.kg).toFixed(2))
+              : Number(((clampedQty / selectedOption.available) * selectedOption.usdTotal).toFixed(2))
             : 0;
 
         const courierShort =
@@ -2943,6 +2999,7 @@ export const ClientPortal: React.FC = () => {
                       ...(relNotes.trim() ? { delivery_notes: relNotes.trim() } : {}),
                       metal_type: selectedOption.id,
                       release_quantity: formattedQty,
+                      release_qty_num: String(qtyNum),
                     },
                   });
                 }}
@@ -3059,13 +3116,27 @@ export const ClientPortal: React.FC = () => {
                         placeholder={`e.g. 1.00 ${selectedOption.unit}`}
                         className="w-full px-3 py-2 text-sm font-mono font-semibold border border-slate-300 rounded bg-white disabled:bg-slate-100 focus:outline-none focus:border-[#0D1F3C]"
                       />
-                      {qtyNum > 0 && selectedOption.available > 0 && (
-                        <p className="text-[11px] text-slate-500 mt-1">
-                          Estimated custody release value:{' '}
-                          <span className="font-mono font-bold text-[#0D1F3C]">
-                            {formatMoney(estReleaseUSD)}
-                          </span>
-                        </p>
+                      {qtyNum > 0 && selectedOption.available > 0 && !exceedsBalance && (
+                        <div className="mt-1.5 bg-[#FAF7EC] border border-[#C59B27]/35 rounded px-2.5 py-1.5 text-[11px] space-y-0.5">
+                          <div className="flex items-center justify-between gap-2 text-slate-700">
+                            <span>Live Market Release Value:</span>
+                            <span className="font-mono font-bold text-[#0D1F3C]">
+                              {formatMoney(estReleaseUSD)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 text-slate-600">
+                            <span>Remaining {selectedOption.id}:</span>
+                            <span className="font-mono font-semibold text-[#0D1F3C]">
+                              {Math.max(0, selectedOption.available - clampedQty).toFixed(3)} {selectedOption.unit}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 text-slate-600">
+                            <span>Projected Cash / Portfolio Balance:</span>
+                            <span className="font-mono font-semibold text-[#0D1F3C]">
+                              {formatMoney(Math.max(0, cashUSD - estReleaseUSD))}
+                            </span>
+                          </div>
+                        </div>
                       )}
                     </div>
 
