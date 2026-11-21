@@ -141,8 +141,14 @@ export const AdminPanel: React.FC = () => {
   useEffect(() => {
     const nextDrafts: Record<string, AdminClientBalanceUpdate> = {};
     const nextOffsets: Record<string, number> = {};
+    const todayFallback = new Date().toISOString().slice(0, 10);
     adminClients.forEach((c) => {
-      const d = {
+      const resolvedDate =
+        (c.account_opened_date || '').trim().slice(0, 10) ||
+        (c.created_at || '').trim().slice(0, 10) ||
+        todayFallback;
+      const d: AdminClientBalanceUpdate = {
+        account_opened_date: resolvedDate,
         cash_usd: Number(c.cash_usd) || 0,
         gold_kg: Number(c.gold_kg) || 0,
         silver_kg: Number(c.silver_kg) || 0,
@@ -253,18 +259,28 @@ export const AdminPanel: React.FC = () => {
     field: keyof AdminClientBalanceUpdate,
     value: string
   ) => {
-    const rawNum = value === '' ? 0 : Number(value);
-    const cleanNum = Number.isNaN(rawNum) ? 0 : Math.max(0, rawNum);
     setSavedIds((prev) => ({ ...prev, [clientId]: false }));
     setRowErrors((prev) => ({ ...prev, [clientId]: '' }));
 
-    const currentDraft = drafts[clientId] || {
+    const currentDraft: AdminClientBalanceUpdate = drafts[clientId] || {
+      account_opened_date: new Date().toISOString().slice(0, 10),
       cash_usd: 0,
       gold_kg: 0,
       silver_kg: 0,
       diamond_carats: 0,
       diamond_value_usd: 0,
     };
+
+    if (field === 'account_opened_date') {
+      setDrafts((prev) => ({
+        ...prev,
+        [clientId]: { ...currentDraft, account_opened_date: value.trim().slice(0, 10) },
+      }));
+      return;
+    }
+
+    const rawNum = value === '' ? 0 : Number(value);
+    const cleanNum = Number.isNaN(rawNum) ? 0 : Math.max(0, rawNum);
 
     if (field === 'cash_usd') {
       const currentHoldingsVal = calcHoldingsValuation(currentDraft).totalVal;
@@ -311,6 +327,24 @@ export const AdminPanel: React.FC = () => {
   const handleSaveRow = async (clientId: string) => {
     const payload = drafts[clientId];
     if (!payload) return;
+    const cleanDate = (payload.account_opened_date || '').trim().slice(0, 10);
+    if (cleanDate) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+        setRowErrors((prev) => ({
+          ...prev,
+          [clientId]: 'Account Opened Date must use YYYY-MM-DD format.',
+        }));
+        return;
+      }
+      const yr = Number(cleanDate.slice(0, 4));
+      if (yr < 1990 || yr > 2030) {
+        setRowErrors((prev) => ({
+          ...prev,
+          [clientId]: 'Account Opened Date year must be between 1990 and 2030.',
+        }));
+        return;
+      }
+    }
     setSavingId(clientId);
     setRowErrors((prev) => ({ ...prev, [clientId]: '' }));
     const res = await adminSaveClientRow(clientId, payload);
@@ -666,6 +700,7 @@ export const AdminPanel: React.FC = () => {
             <thead className="bg-[#F8FAFC] text-slate-600 border-b border-slate-200">
               <tr>
                 <th className="py-3 px-4 text-left font-semibold">Client Name &amp; Email</th>
+                <th className="py-3 px-3 text-left font-semibold">Account Opened Date</th>
                 <th className="py-3 px-3 text-left font-semibold">Cash / Portfolio Balance ($)</th>
                 <th className="py-3 px-3 text-left font-semibold">Gold (kg)</th>
                 <th className="py-3 px-3 text-left font-semibold">Silver (kg)</th>
@@ -676,7 +711,12 @@ export const AdminPanel: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredClients.map((c) => {
+                const defaultDate =
+                  (c.account_opened_date || '').trim().slice(0, 10) ||
+                  (c.created_at || '').trim().slice(0, 10) ||
+                  new Date().toISOString().slice(0, 10);
                 const draft = drafts[c.id] || {
+                  account_opened_date: defaultDate,
                   cash_usd: Number(c.cash_usd) || 0,
                   gold_kg: Number(c.gold_kg) || 0,
                   silver_kg: Number(c.silver_kg) || 0,
@@ -773,8 +813,32 @@ export const AdminPanel: React.FC = () => {
                       </div>
 
                       {rowErr && (
-                        <div className="text-[11px] text-rose-700 mt-1">{rowErr}</div>
+                        <div className="text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded px-2 py-1 mt-1.5 space-y-1">
+                          <div>{rowErr}</div>
+                          {rowErr.toLowerCase().includes('account_opened_date') && (
+                            <div className="font-mono text-[10px] bg-slate-900 text-slate-100 p-1.5 rounded">
+                              alter table public.clients add column if not exists account_opened_date text;
+                            </div>
+                          )}
+                        </div>
                       )}
+                    </td>
+
+                    <td className="py-3 px-3">
+                      <input
+                        type="date"
+                        min="1990-01-01"
+                        max="2030-12-31"
+                        aria-label={`Account Opened Date for ${c.full_name}`}
+                        value={draft.account_opened_date}
+                        onChange={(e) =>
+                          updateDraftField(c.id, 'account_opened_date', e.target.value)
+                        }
+                        className="w-36 px-2.5 py-2 text-xs font-mono font-semibold border border-slate-300 rounded bg-white text-[#0D1F3C] focus:outline-none focus:border-[#0D1F3C]"
+                      />
+                      <span className="mt-1 block text-[10px] font-mono text-slate-400">
+                        YYYY-MM-DD (1990–2030)
+                      </span>
                     </td>
 
                     <td className="py-3 px-3">
@@ -888,7 +952,7 @@ export const AdminPanel: React.FC = () => {
 
               {filteredClients.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-10 text-center text-slate-500">
+                  <td colSpan={8} className="py-10 text-center text-slate-500">
                     {adminLoading
                       ? 'Loading registered users from clients table...'
                       : 'No registered users found in the clients table yet.'}

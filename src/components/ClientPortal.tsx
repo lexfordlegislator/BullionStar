@@ -260,6 +260,10 @@ export const ClientPortal: React.FC = () => {
   const silverKg = Number(client.silver_kg || 0);
   const diamondCarats = Number(client.diamond_carats || 0);
   const diamondValueUSD = Number(client.diamond_value_usd || 0);
+  const openedDateDisplay = (
+    client.account_opened_date ||
+    (client.created_at ? client.created_at.slice(0, 10) : '')
+  ).slice(0, 10);
 
   const goldValueUSD = Number((goldKg * spotPriceMap.Gold.kg).toFixed(2));
   const silverValueUSD = Number((silverKg * spotPriceMap.Silver.kg).toFixed(2));
@@ -367,7 +371,8 @@ export const ClientPortal: React.FC = () => {
       `Insured Value      : US$${Number(cert.insured_value_usd).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
       `Independent Auditor: ${cert.auditor_name}`,
       `Verification Status: ${cert.audit_status}`,
-      `Issued Timestamp   : ${new Date(cert.issued_at).toLocaleString()}`,
+      `Account Opened Date: Opened ${openedDateDisplay || cert.issued_at.slice(0, 10)}`,
+      `Issued Date        : ${cert.issued_at.slice(0, 10)}`,
       '',
       'REGISTERED ASSET TOTALS:',
       `  Cash Balance      : US$${cashUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
@@ -450,10 +455,10 @@ export const ClientPortal: React.FC = () => {
               <span>{isDemoMode ? t('portal.demoMode') : t('portal.segregatedVault')}</span>
               <span aria-hidden="true">·</span>
               <span>{client.country}</span>
-              {client.created_at && (
+              {openedDateDisplay && (
                 <>
                   <span aria-hidden="true">·</span>
-                  <span>Opened {client.created_at.slice(0, 10)}</span>
+                  <span>Opened {openedDateDisplay}</span>
                 </>
               )}
             </div>
@@ -864,6 +869,7 @@ export const ClientPortal: React.FC = () => {
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Physical bullion and certified diamonds stored under {client.vault_id}
+                {openedDateDisplay ? ` · Opened ${openedDateDisplay}` : ''}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -985,8 +991,10 @@ export const ClientPortal: React.FC = () => {
                   <dd className="font-semibold text-slate-900">{client.full_name}</dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500">Issued Date</dt>
-                  <dd className="font-mono text-slate-700">{certificate.issued_at.slice(0, 10)}</dd>
+                  <dt className="text-slate-500">Account Opened Date</dt>
+                  <dd className="font-mono text-slate-700">
+                    Opened {openedDateDisplay || certificate.issued_at.slice(0, 10)}
+                  </dd>
                 </div>
               </dl>
 
@@ -1983,6 +1991,12 @@ export const ClientPortal: React.FC = () => {
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-500">Verification Status</span>
                     <span className="font-semibold text-emerald-700">{certPreview.audit_status}</span>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-500">Account Opened Date</span>
+                    <span className="font-mono font-semibold text-slate-900">
+                      Opened {openedDateDisplay || certPreview.issued_at.slice(0, 10)}
+                    </span>
                   </div>
                   <div className="pt-2 border-t border-slate-200 flex justify-between gap-4">
                     <span className="text-slate-500">Allocated Totals</span>

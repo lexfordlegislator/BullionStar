@@ -43,6 +43,7 @@ interface ToastMessage {
   id: string;
   title: string;
   body: string;
+  variant?: 'default' | 'success';
 }
 
 export interface RegisterInput {
@@ -54,6 +55,7 @@ export interface RegisterInput {
 }
 
 export interface AdminClientBalanceUpdate {
+  account_opened_date: string;
   cash_usd: number;
   gold_kg: number;
   silver_kg: number;
@@ -286,7 +288,18 @@ const EMPTY_CLIENT: ClientRow = {
   diamond_carats: 0,
   diamond_value_usd: 0,
   uploaded_media: [],
+  account_opened_date: '',
   created_at: '',
+};
+
+const getTodayYYYYMMDD = (): string => new Date().toISOString().slice(0, 10);
+
+const resolveOpenedDate = (accountOpenedDate?: string | null, createdAt?: string | null): string => {
+  const raw = (accountOpenedDate || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  const created = (createdAt || '').trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(created)) return created.slice(0, 10);
+  return '';
 };
 
 const BullionContext = createContext<BullionContextType | null>(null);
@@ -374,9 +387,13 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [spotPricesUSD]
   );
 
-  const pushToast = (title: string, body: string) => {
+  const pushToast = (
+    title: string,
+    body: string,
+    variant: ToastMessage['variant'] = 'default'
+  ) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    setToasts((prev) => [...prev.slice(-3), { id, title, body }]);
+    setToasts((prev) => [...prev.slice(-3), { id, title, body, variant }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 5000);
@@ -500,6 +517,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!row && !error) {
       const generatedVaultId =
         fallbackMeta?.vault_id || `BS-SG-${Math.floor(10000 + Math.random() * 89999)}`;
+      const todayDate = getTodayYYYYMMDD();
       const newRow = {
         id: userId,
         full_name: fallbackMeta?.full_name || fallbackEmail?.split('@')[0] || 'Vault Client',
@@ -512,18 +530,29 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         silver_kg: 0,
         diamond_carats: 0,
         diamond_value_usd: 0,
+        account_opened_date: todayDate,
       };
-      const { data: inserted } = await supabase
+      let { data: inserted, error: insErr } = await supabase
         .from('clients')
         .upsert(newRow, { onConflict: 'id' })
         .select('*')
         .limit(1);
+      if (insErr && insErr.message.toLowerCase().includes('account_opened_date')) {
+        const { account_opened_date: _omit, ...fallbackRow } = newRow;
+        const retry = await supabase
+          .from('clients')
+          .upsert(fallbackRow, { onConflict: 'id' })
+          .select('*')
+          .limit(1);
+        inserted = retry.data;
+      }
       if (inserted && inserted.length > 0) {
         row = inserted[0] as ClientRow;
       }
     }
 
     if (row) {
+      const resolvedOpened = resolveOpenedDate(row.account_opened_date, row.created_at);
       setClient({
         ...row,
         cash_usd: Number(row.cash_usd) || 0,
@@ -531,6 +560,7 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         silver_kg: Number(row.silver_kg) || 0,
         diamond_carats: Number(row.diamond_carats) || 0,
         diamond_value_usd: Number(row.diamond_value_usd) || 0,
+        account_opened_date: resolvedOpened,
         uploaded_media: normalizeUploadedMedia(row.uploaded_media),
       });
       setIsDemoMode(false);
@@ -742,22 +772,31 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .limit(1);
 
       if (!existingClient || existingClient.length === 0) {
-        const { error: insertErr } = await supabase.from('clients').upsert(
-          {
-            id: user.id,
-            full_name: resolvedFullName,
-            email: cleanEmail,
-            phone: resolvedPhone,
-            country: resolvedCountry,
-            vault_id: resolvedVaultId,
-            cash_usd: 0,
-            gold_kg: 0,
-            silver_kg: 0,
-            diamond_carats: 0,
-            diamond_value_usd: 0,
-          },
-          { onConflict: 'id' }
-        );
+        const todayDate = getTodayYYYYMMDD();
+        const signupClientPayload = {
+          id: user.id,
+          full_name: resolvedFullName,
+          email: cleanEmail,
+          phone: resolvedPhone,
+          country: resolvedCountry,
+          vault_id: resolvedVaultId,
+          cash_usd: 0,
+          gold_kg: 0,
+          silver_kg: 0,
+          diamond_carats: 0,
+          diamond_value_usd: 0,
+          account_opened_date: todayDate,
+        };
+        let { error: insertErr } = await supabase
+          .from('clients')
+          .upsert(signupClientPayload, { onConflict: 'id' });
+        if (insertErr && insertErr.message.toLowerCase().includes('account_opened_date')) {
+          const { account_opened_date: _omit, ...fallbackSignupPayload } = signupClientPayload;
+          const retry = await supabase
+            .from('clients')
+            .upsert(fallbackSignupPayload, { onConflict: 'id' });
+          insertErr = retry.error;
+        }
         if (insertErr) {
           return { ok: false, error: `Could not create clients record: ${insertErr.message}` };
         }
@@ -1202,12 +1241,14 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const certificate: VaultCertificateSummary | null = useMemo(() => {
     if (isDemoMode) return DEMO_CERTIFICATE;
     if (!isLoggedIn || totalPortfolioUSD <= 0) return null;
+    const effectiveOpenedDate =
+      resolveOpenedDate(client.account_opened_date, client.created_at) || getTodayYYYYMMDD();
     return {
       certificate_no: `CERT-${client.vault_id || 'BS-SG'}`,
       insured_value_usd: totalPortfolioUSD,
       auditor_name: 'Bureau Veritas Singapore',
       audit_status: 'Verified',
-      issued_at: client.created_at || new Date().toISOString(),
+      issued_at: effectiveOpenedDate,
     };
   }, [isDemoMode, isLoggedIn, totalPortfolioUSD, client]);
 
@@ -2259,13 +2300,40 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const adminSaveClientRow = async (clientId: string, updates: AdminClientBalanceUpdate) => {
-    const cleanPayload = {
+    const cleanDate = (updates.account_opened_date || '').trim().slice(0, 10);
+    if (cleanDate) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) {
+        return { ok: false, error: 'Account Opened Date must use YYYY-MM-DD format.' };
+      }
+      const yearNum = Number(cleanDate.slice(0, 4));
+      if (yearNum < 1990 || yearNum > 2030) {
+        return { ok: false, error: 'Account Opened Date year must be between 1990 and 2030.' };
+      }
+    }
+
+    const previousClient = adminClients.find((row) => row.id === clientId);
+    const prevDate = previousClient
+      ? resolveOpenedDate(previousClient.account_opened_date, previousClient.created_at)
+      : '';
+
+    const cleanPayload: {
+      cash_usd: number;
+      gold_kg: number;
+      silver_kg: number;
+      diamond_carats: number;
+      diamond_value_usd: number;
+      account_opened_date?: string;
+    } = {
       cash_usd: Math.max(0, Number(updates.cash_usd) || 0),
       gold_kg: Math.max(0, Number(updates.gold_kg) || 0),
       silver_kg: Math.max(0, Number(updates.silver_kg) || 0),
       diamond_carats: Math.max(0, Number(updates.diamond_carats) || 0),
       diamond_value_usd: Math.max(0, Number(updates.diamond_value_usd) || 0),
     };
+
+    if (cleanDate) {
+      cleanPayload.account_opened_date = cleanDate;
+    }
 
     const { data, error } = await supabase
       .from('clients')
@@ -2281,6 +2349,10 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const updatedRow = data?.[0]
       ? ({
           ...(data[0] as ClientRow),
+          account_opened_date: resolveOpenedDate(
+            (data[0] as ClientRow).account_opened_date,
+            (data[0] as ClientRow).created_at
+          ),
           uploaded_media: normalizeUploadedMedia((data[0] as ClientRow).uploaded_media),
         } as ClientRow)
       : null;
@@ -2292,7 +2364,16 @@ export const BullionProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setClient((prev) => updatedRow || { ...prev, ...cleanPayload });
     }
 
-    pushToast('Saved!', `Updated balances in clients table.`);
+    const dateChanged = Boolean(cleanDate && cleanDate !== prevDate);
+    if (dateChanged) {
+      pushToast(
+        'Account opened date updated',
+        `Saved Account Opened Date (${cleanDate}) and balances for ${previousClient?.full_name || 'client'}.`,
+        'success'
+      );
+    } else {
+      pushToast('Saved!', 'Updated balances and profile in clients table.', 'success');
+    }
     return { ok: true };
   };
 

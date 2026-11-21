@@ -281,6 +281,7 @@ export const DEMO_CLIENT: ClientRow = {
   silver_kg: 15.55,
   diamond_carats: 1.52,
   diamond_value_usd: 24850.0,
+  account_opened_date: '2026-03-14',
   created_at: '2026-03-14T08:00:00Z',
 };
 

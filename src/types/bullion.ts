@@ -79,6 +79,7 @@ export interface ClientRow {
   diamond_carats: number;
   diamond_value_usd: number;
   uploaded_media?: UploadedMediaItem[] | null;
+  account_opened_date?: string;
   created_at?: string;
 }
 
